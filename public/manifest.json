@@ -1,0 +1,16 @@
+{
+  "name": "Bill-Dale POS",
+  "short_name": "BillDale",
+  "description": "Offline-first retail POS system",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#0055FF",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
