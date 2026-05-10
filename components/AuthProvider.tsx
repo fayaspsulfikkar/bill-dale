@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
 import { getBusinessMembership, ADMIN_PERMISSIONS, STAFF_PERMISSIONS } from "@/lib/auth";
+import type { Session } from "@supabase/supabase-js";
 
 const PUBLIC_PATHS = ["/login", "/invite"];
 const ONBOARDING_PATH = "/onboarding";
@@ -41,7 +42,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
     initSession();
 
-    const { data: { subscription } } = supabase!.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase!.auth.onAuthStateChange(async (_event: string, session: Session | null) => {
       if (session?.user) {
         await hydrateSession(session.user);
       } else {
