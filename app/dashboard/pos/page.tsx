@@ -21,7 +21,7 @@ export default function POSPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [splitDetails, setSplitDetails] = useState({ cash: 0, card: 0, upi: 0 });
 
-  const user = useAuthStore(state => state.user);
+  const { user, businessId } = useAuthStore();
   const { items, discount, addItem, updateQuantity, removeItem, setDiscount, clearCart, getTotals } = useCartStore();
   const { subtotal, taxAmount, total } = getTotals();
 
@@ -41,8 +41,9 @@ export default function POSPage() {
   }, [allProducts, searchQuery]);
 
   const handleCheckout = async () => {
-    if (!user?.branch_id) {
-      alert("No branch assigned to user. Cannot process bill.");
+    const activeBranchId = businessId ?? "default-branch";
+    if (!activeBranchId) {
+      alert("No branch assigned. Cannot process bill.");
       return;
     }
     if (items.length === 0) return;
@@ -54,8 +55,8 @@ export default function POSPage() {
 
       const newInvoice: Invoice = {
         id: invoiceId,
-        branch_id: user.branch_id,
-        user_id: user.id,
+        branch_id: activeBranchId,
+        user_id: user?.id ?? "unknown",
         total_amount: total,
         tax_amount: taxAmount,
         discount,
@@ -84,7 +85,7 @@ export default function POSPage() {
           await db.sync_queue.add({ table_name: 'invoice_items', operation: 'INSERT', data: item, timestamp });
 
           // Deduct Stock
-          const invRecord = await db.inventory.where({ product_id: item.product_id, branch_id: user.branch_id! }).first();
+          const invRecord = await db.inventory.where({ product_id: item.product_id, branch_id: activeBranchId }).first();
           if (invRecord) {
             const updatedStock = invRecord.stock - item.quantity;
             await db.inventory.update(invRecord.id, { stock: updatedStock, last_updated: timestamp });

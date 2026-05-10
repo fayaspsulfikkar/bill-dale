@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/next";
+import AuthProvider from "@/components/AuthProvider";
+import ThemeInitializer from "@/components/ThemeInitializer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,8 +21,6 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
 };
 
-import AuthProvider from "@/components/AuthProvider";
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -32,6 +32,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
       <body suppressHydrationWarning className="min-h-full flex flex-col bg-background text-foreground">
+        <ThemeInitializer />
         <AuthProvider>{children}</AuthProvider>
         <Analytics />
       </body>

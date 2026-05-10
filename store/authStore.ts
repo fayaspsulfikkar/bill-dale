@@ -1,11 +1,27 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User } from '@/offline/db';
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name?: string;
+  avatar_url?: string;
+}
 
 interface AuthState {
-  user: User | null;
+  user: AuthUser | null;
+  businessId: string | null;
+  businessName: string | null;
+  role: 'admin' | 'staff' | null;
+  permissions: string[];
+  hasCompletedOnboarding: boolean;
   isAuthenticated: boolean;
-  login: (user: User) => void;
+
+  setSession: (user: AuthUser, businessId: string | null, businessName: string | null, role: 'admin' | 'staff' | null, permissions: string[], hasOnboarded: boolean) => void;
+  clearSession: () => void;
+  setOnboardingComplete: (businessId: string, businessName: string) => void;
+  // Legacy compat
+  login: (user: AuthUser) => void;
   logout: () => void;
 }
 
@@ -13,12 +29,51 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
+      businessId: null,
+      businessName: null,
+      role: null,
+      permissions: [],
+      hasCompletedOnboarding: false,
       isAuthenticated: false,
+
+      setSession: (user, businessId, businessName, role, permissions, hasOnboarded) =>
+        set({
+          user,
+          businessId,
+          businessName,
+          role,
+          permissions,
+          hasCompletedOnboarding: hasOnboarded,
+          isAuthenticated: true,
+        }),
+
+      clearSession: () =>
+        set({
+          user: null,
+          businessId: null,
+          businessName: null,
+          role: null,
+          permissions: [],
+          hasCompletedOnboarding: false,
+          isAuthenticated: false,
+        }),
+
+      setOnboardingComplete: (businessId, businessName) =>
+        set({ businessId, businessName, hasCompletedOnboarding: true }),
+
+      // Legacy compat
       login: (user) => set({ user, isAuthenticated: true }),
-      logout: () => set({ user: null, isAuthenticated: false }),
+      logout: () =>
+        set({
+          user: null,
+          businessId: null,
+          businessName: null,
+          role: null,
+          permissions: [],
+          hasCompletedOnboarding: false,
+          isAuthenticated: false,
+        }),
     }),
-    {
-      name: 'bill-dale-auth',
-    }
+    { name: 'bill-dale-auth' }
   )
 );
