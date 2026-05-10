@@ -1,22 +1,13 @@
-// Singleton browser client — only used in Client Components.
-// For Server Components and Route Handlers, import from utils/supabase/server.ts instead.
-'use client';
+import { createBrowserClient } from '@supabase/ssr';
 
-let _client: ReturnType<typeof import('@/utils/supabase/client').createClient> | null = null;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+// Returns null when env vars aren't configured (demo / local dev without Supabase)
+export const supabase = supabaseUrl && supabaseKey
+  ? createBrowserClient(supabaseUrl, supabaseKey)
+  : null;
 
 export function getSupabaseClient() {
-  if (typeof window === 'undefined') return null;
-  if (!_client) {
-    const { createClient } = require('@/utils/supabase/client');
-    _client = createClient();
-  }
-  return _client;
+  return supabase;
 }
-
-// Legacy compat export — use getSupabaseClient() in new code
-export const supabase = typeof window !== 'undefined'
-  ? (() => {
-      const { createClient } = require('@/utils/supabase/client');
-      return createClient();
-    })()
-  : null;
