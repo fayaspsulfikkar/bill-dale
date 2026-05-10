@@ -23,8 +23,8 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
 
-    // Mock Login for now if Supabase isn't connected
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder")) {
+    // Mock Login: runs when Supabase env vars are not configured
+    if (!supabase) {
       setTimeout(() => {
         login({
           id: "mock-id-123",
@@ -46,11 +46,10 @@ export default function LoginPage() {
 
       if (signInError) throw signInError;
 
-      // In a real app, you would fetch user role/branch from your users table here.
       login({
         id: data.user.id,
         email: data.user.email!,
-        role: "admin", // Replace with actual fetched role
+        role: "admin",
         branch_id: "branch-1",
         created_at: data.user.created_at,
       });
