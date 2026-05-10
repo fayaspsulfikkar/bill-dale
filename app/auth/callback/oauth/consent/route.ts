@@ -4,8 +4,10 @@ import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';
 
 /**
- * Standard OAuth callback — handles code exchange for the legacy redirect URL.
- * The publishable key flow uses /auth/callback/oauth/consent instead.
+ * OAuth 2.1 PKCE consent callback — Supabase routes Google OAuth through
+ * /auth/callback/oauth/consent when using the publishable key flow.
+ * This handler exchanges the authorization code for a session, then
+ * redirects to the appropriate page.
  */
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
@@ -18,10 +20,13 @@ export async function GET(request: NextRequest) {
     const supabase = createClient(cookieStore);
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      // Successfully authenticated — redirect to intended destination
       return NextResponse.redirect(`${origin}${next}`);
     }
+    // Auth failed — redirect to login with error
     return NextResponse.redirect(`${origin}/login?error=auth_failed`);
   }
 
+  // No code present — redirect to login
   return NextResponse.redirect(`${origin}/login`);
 }
