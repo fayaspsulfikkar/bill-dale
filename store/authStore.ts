@@ -39,7 +39,7 @@ export const useAuthStore = create<AuthState>()(
       permissions: [],
       hasCompletedOnboarding: false,
       isAuthenticated: false,
-      staffMode: false,
+      staffMode: true, // ← always locked by default
 
       setStaffMode: (on) => set({ staffMode: on }),
 
@@ -63,7 +63,7 @@ export const useAuthStore = create<AuthState>()(
           permissions: [],
           hasCompletedOnboarding: false,
           isAuthenticated: false,
-          staffMode: false,
+          staffMode: true, // reset to locked on logout
         }),
 
       setOnboardingComplete: (businessId, businessName) =>
@@ -80,7 +80,7 @@ export const useAuthStore = create<AuthState>()(
           permissions: [],
           hasCompletedOnboarding: false,
           isAuthenticated: false,
-          staffMode: false,
+          staffMode: true, // reset to locked on logout
         }),
     }),
     { name: 'bill-dale-auth' }
