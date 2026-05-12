@@ -128,13 +128,26 @@ async function hydrateUser(
   supabaseUser: User,
   setSession: ReturnType<typeof useAuthStore.getState>["setSession"]
 ) {
-  // Race membership query against a 4s timeout
+  // Read current persisted state BEFORE the async query
+  // so we can fall back to it if the query times out or fails
+  const persisted = useAuthStore.getState();
+
+  // Race membership query against a 5s timeout
   const membership = await Promise.race([
     getBusinessMembership(supabaseUser.id),
-    new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
   ]);
 
-  const role = (membership?.role ?? null) as "admin" | "staff" | null;
+  // If query returned null (timeout / RLS issue / network), preserve the
+  // persisted onboarding/business state so we never redirect to /onboarding
+  // on a simple page refresh.
+  const businessId   = membership?.business_id   ?? persisted.businessId;
+  const businessName = membership?.businesses?.name ?? persisted.businessName;
+  const hasOnboarded = membership !== null
+    ? !!membership.business_id
+    : persisted.hasCompletedOnboarding; // ← never downgrade on failure
+
+  const role = (membership?.role ?? (persisted.hasCompletedOnboarding ? "admin" : null)) as "admin" | "staff" | null;
   const permissions =
     role === "admin"
       ? ADMIN_PERMISSIONS
@@ -149,10 +162,10 @@ async function hydrateUser(
       name: supabaseUser.user_metadata?.full_name as string | undefined,
       avatar_url: supabaseUser.user_metadata?.avatar_url as string | undefined,
     },
-    membership?.business_id ?? null,
-    membership?.businesses?.name ?? null,
+    businessId,
+    businessName,
     role,
     permissions,
-    !!membership?.business_id,
+    hasOnboarded,
   );
 }
