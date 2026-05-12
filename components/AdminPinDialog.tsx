@@ -97,14 +97,14 @@ export function AdminPinDialog({
           style={{
             backdropFilter: "blur(32px) saturate(180%)",
             WebkitBackdropFilter: "blur(32px) saturate(180%)",
-            backgroundColor: "rgba(0, 0, 0, 0.45)",
+            backgroundColor: "rgba(0, 0, 0, 0.25)",
           }}
           onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         >
           {/* Ambient glow blobs */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-primary/20 blur-[120px]" />
-            <div className="absolute bottom-1/3 left-1/3 w-64 h-64 rounded-full bg-violet-500/10 blur-[100px]" />
+            <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-primary/10 blur-[140px]" />
+            <div className="absolute bottom-1/3 left-1/3 w-64 h-64 rounded-full bg-violet-500/5 blur-[120px]" />
           </div>
 
           <motion.div
@@ -118,18 +118,18 @@ export function AdminPinDialog({
               animate={shake ? { x: [-10, 10, -7, 7, -4, 4, 0] } : {}}
               transition={{ duration: 0.45 }}
               style={{
-                background: "rgba(255, 255, 255, 0.06)",
-                backdropFilter: "blur(40px) saturate(200%)",
-                WebkitBackdropFilter: "blur(40px) saturate(200%)",
-                border: "1px solid rgba(255, 255, 255, 0.12)",
-                boxShadow: "0 32px 80px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05) inset, 0 1px 0 rgba(255,255,255,0.15) inset",
+                background: "rgba(255, 255, 255, 0.025)",
+                backdropFilter: "blur(48px) saturate(180%)",
+                WebkitBackdropFilter: "blur(48px) saturate(180%)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+                boxShadow: "0 32px 80px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.03) inset, 0 1px 0 rgba(255,255,255,0.1) inset",
               }}
               className="rounded-3xl p-8"
             >
               {/* Close */}
               <button
                 onClick={onClose}
-                style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)" }}
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
                 className="absolute top-5 right-5 w-8 h-8 rounded-full flex items-center justify-center text-white/50 hover:text-white/90 transition-colors"
               >
                 <X className="w-3.5 h-3.5" />
@@ -140,9 +140,9 @@ export function AdminPinDialog({
                 <div
                   className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
                   style={{
-                    background: "rgba(99,102,241,0.15)",
-                    border: "1px solid rgba(99,102,241,0.3)",
-                    boxShadow: "0 0 40px rgba(99,102,241,0.25)",
+                    background: "rgba(99,102,241,0.08)",
+                    border: "1px solid rgba(99,102,241,0.18)",
+                    boxShadow: "0 0 32px rgba(99,102,241,0.15)",
                   }}
                 >
                   <Shield className="w-7 h-7 text-primary" />
@@ -162,7 +162,7 @@ export function AdminPinDialog({
                   >
                     <div
                       className="p-3 rounded-xl text-red-300 text-sm text-center"
-                      style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.2)" }}
+                      style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.12)" }}
                     >
                       {error}
                     </div>
@@ -183,17 +183,17 @@ export function AdminPinDialog({
                   placeholder="• • • •"
                   className="w-full h-14 px-5 pr-14 rounded-2xl text-2xl font-mono tracking-[0.6em] text-center text-white placeholder-white/20 focus:outline-none transition-all"
                   style={{
-                    background: "rgba(255,255,255,0.07)",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    boxShadow: "0 4px 24px rgba(0,0,0,0.2) inset",
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.07)",
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.15) inset",
                   }}
                   onFocus={(e) => {
-                    e.currentTarget.style.border = "1px solid rgba(99,102,241,0.5)";
-                    e.currentTarget.style.boxShadow = "0 4px 24px rgba(0,0,0,0.2) inset, 0 0 0 3px rgba(99,102,241,0.12)";
+                    e.currentTarget.style.border = "1px solid rgba(99,102,241,0.35)";
+                    e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.15) inset, 0 0 0 3px rgba(99,102,241,0.08)";
                   }}
                   onBlur={(e) => {
-                    e.currentTarget.style.border = "1px solid rgba(255,255,255,0.12)";
-                    e.currentTarget.style.boxShadow = "0 4px 24px rgba(0,0,0,0.2) inset";
+                    e.currentTarget.style.border = "1px solid rgba(255,255,255,0.07)";
+                    e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.15) inset";
                   }}
                 />
                 <button
