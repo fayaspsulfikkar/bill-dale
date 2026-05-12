@@ -9,47 +9,59 @@ import type { User } from "@supabase/supabase-js";
 
 const PUBLIC_PATHS = ["/login", "/invite", "/auth"];
 const ONBOARDING_PREFIX = "/onboarding";
+const READY_TIMEOUT_MS = 6000; // never stay stuck more than 6s
 
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setSession, clearSession, isAuthenticated, hasCompletedOnboarding } = useAuthStore();
   const router = useRouter();
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
-  // Prevent concurrent hydrateSession calls
-  const hydrating = useRef(false);
+  const readyRef = useRef(false);
+
+  const markReady = () => {
+    if (!readyRef.current) {
+      readyRef.current = true;
+      setReady(true);
+    }
+  };
 
   useEffect(() => {
     // ── No Supabase (demo mode) ──────────────────────────────
     if (!supabase) {
-      setReady(true);
+      markReady();
       return;
     }
 
-    // ── Use onAuthStateChange as the SINGLE source of truth ──
-    // It fires with INITIAL_SESSION first (replaces getSession()),
-    // then again on any login/logout/token refresh.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (hydrating.current) return;
-        hydrating.current = true;
+    // Safety timeout — never stay stuck more than READY_TIMEOUT_MS
+    const safetyTimer = setTimeout(() => {
+      console.warn("[AuthProvider] Safety timeout fired — forcing ready");
+      markReady();
+    }, READY_TIMEOUT_MS);
 
+    // onAuthStateChange is the single source of truth.
+    // INITIAL_SESSION fires immediately with the current session (or null).
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
         try {
           if (session?.user) {
-            await hydrateUser(session.user);
+            await hydrateUser(session.user, setSession);
           } else {
             clearSession();
           }
-        } catch {
-          // Never leave the app stuck — always mark ready
+        } catch (err) {
+          console.error("[AuthProvider] hydrateUser error:", err);
           clearSession();
         } finally {
-          hydrating.current = false;
-          setReady(true); // ← always unblocks the UI
+          clearTimeout(safetyTimer);
+          markReady();
         }
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(safetyTimer);
+      subscription.unsubscribe();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -111,9 +123,17 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   return <>{children}</>;
 }
 
-// ── Helper ─────────────────────────────────────────────────
-async function hydrateUser(supabaseUser: User) {
-  const membership = await getBusinessMembership(supabaseUser.id);
+// ── Hydrate user from Supabase session ───────────────────────
+async function hydrateUser(
+  supabaseUser: User,
+  setSession: ReturnType<typeof useAuthStore.getState>["setSession"]
+) {
+  // Race membership query against a 4s timeout
+  const membership = await Promise.race([
+    getBusinessMembership(supabaseUser.id),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
+  ]);
+
   const role = (membership?.role ?? null) as "admin" | "staff" | null;
   const permissions =
     role === "admin"
@@ -122,7 +142,7 @@ async function hydrateUser(supabaseUser: User) {
       ? [...STAFF_PERMISSIONS, ...(membership?.permissions ?? [])]
       : [];
 
-  useAuthStore.getState().setSession(
+  setSession(
     {
       id: supabaseUser.id,
       email: supabaseUser.email ?? "",
