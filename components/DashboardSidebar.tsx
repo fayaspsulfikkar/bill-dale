@@ -185,19 +185,28 @@ export function DashboardSidebar() {
         </button>
 
         {user && (
-          <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-white/5">
+          <button
+            onClick={() => router.push("/dashboard/users")}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left group"
+            title="View account & team"
+          >
             {user.avatar_url ? (
-              <Image src={user.avatar_url} alt="avatar" width={28} height={28} className="w-7 h-7 rounded-full object-cover shrink-0" />
+              <Image src={user.avatar_url} alt="avatar" width={32} height={32} className="w-8 h-8 rounded-full object-cover shrink-0 ring-2 ring-primary/20" />
             ) : (
-              <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold shrink-0">
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-sm font-bold shrink-0">
                 {(user.name ?? user.email ?? "?")[0].toUpperCase()}
               </div>
             )}
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold truncate">{user.name ?? user.email}</p>
-              <p className="text-xs text-muted-foreground">{isAdmin ? "Administrator" : "Staff"}</p>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                isAdmin ? "bg-purple-500/20 text-purple-400" : "bg-blue-500/20 text-blue-400"
+              }`}>
+                {isAdmin ? "ADMIN" : "STAFF"}
+              </span>
             </div>
-          </div>
+            <Users className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+          </button>
         )}
 
         <button
@@ -211,3 +220,4 @@ export function DashboardSidebar() {
     </div>
   );
 }
+

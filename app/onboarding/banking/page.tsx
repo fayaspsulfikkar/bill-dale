@@ -65,15 +65,13 @@ export default function OnboardingBanking() {
         await db.sync_queue.add({ table_name: "businesses", operation: "INSERT", data: newBusiness, timestamp: ts });
       });
 
-      // Also save to Supabase if available
+      // Sync to Supabase — use upsert so re-runs don't silently fail
       if (supabase && user) {
-        await supabase.from("businesses").insert(newBusiness);
-        await supabase.from("business_members").insert({
-          business_id: businessId,
-          user_id: user.id,
-          role: "admin",
-          permissions: [],
-        });
+        await supabase.from("businesses").upsert(newBusiness, { onConflict: "id" });
+        await supabase.from("business_members").upsert(
+          { business_id: businessId, user_id: user.id, role: "admin", permissions: [] },
+          { onConflict: "business_id,user_id" }
+        );
       }
 
       setOnboardingComplete(businessId, newBusiness.name);
