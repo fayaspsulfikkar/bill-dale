@@ -1,119 +1,138 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
 import { getBusinessMembership, ADMIN_PERMISSIONS, STAFF_PERMISSIONS } from "@/lib/auth";
-import type { Session } from "@supabase/supabase-js";
+import type { User } from "@supabase/supabase-js";
 
-const PUBLIC_PATHS = ["/login", "/invite"];
-const ONBOARDING_PATH = "/onboarding";
+const PUBLIC_PATHS = ["/login", "/invite", "/auth"];
+const ONBOARDING_PREFIX = "/onboarding";
 
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setSession, clearSession, isAuthenticated, hasCompletedOnboarding } = useAuthStore();
   const router = useRouter();
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [ready, setReady] = useState(false);
+  // Prevent concurrent hydrateSession calls
+  const hydrating = useRef(false);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-
-    // If no Supabase, fall into mock mode — allow normal navigation
+    // ── No Supabase (demo mode) ──────────────────────────────
     if (!supabase) {
-      setLoading(false);
+      setReady(true);
       return;
     }
 
-    const initSession = async () => {
-      const { data: { session } } = await supabase!.auth.getSession();
-      if (session?.user) {
-        await hydrateSession(session.user);
-      } else {
-        clearSession();
-      }
-      setLoading(false);
-    };
+    // ── Use onAuthStateChange as the SINGLE source of truth ──
+    // It fires with INITIAL_SESSION first (replaces getSession()),
+    // then again on any login/logout/token refresh.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (hydrating.current) return;
+        hydrating.current = true;
 
-    initSession();
-
-    const { data: { subscription } } = supabase!.auth.onAuthStateChange(async (_event: string, session: Session | null) => {
-      if (session?.user) {
-        await hydrateSession(session.user);
-      } else {
-        clearSession();
+        try {
+          if (session?.user) {
+            await hydrateUser(session.user);
+          } else {
+            clearSession();
+          }
+        } catch {
+          // Never leave the app stuck — always mark ready
+          clearSession();
+        } finally {
+          hydrating.current = false;
+          setReady(true); // ← always unblocks the UI
+        }
       }
-    });
+    );
 
     return () => subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted]);
+  }, []);
 
-  async function hydrateSession(supabaseUser: { id: string; email?: string; user_metadata?: Record<string, unknown> }) {
-    const membership = await getBusinessMembership(supabaseUser.id);
-    const role = membership?.role ?? null;
-    const permissions = role === 'admin'
-      ? ADMIN_PERMISSIONS
-      : role === 'staff'
-        ? [...STAFF_PERMISSIONS, ...(membership?.permissions ?? [])]
-        : [];
-
-    setSession(
-      {
-        id: supabaseUser.id,
-        email: supabaseUser.email ?? '',
-        name: supabaseUser.user_metadata?.full_name as string | undefined,
-        avatar_url: supabaseUser.user_metadata?.avatar_url as string | undefined,
-      },
-      membership?.business_id ?? null,
-      membership?.businesses?.name ?? null,
-      role as 'admin' | 'staff' | null,
-      permissions,
-      !!membership?.business_id,
-    );
-  }
-
-  // Route guarding
+  // ── Route guarding ────────────────────────────────────────
   useEffect(() => {
-    if (!mounted || loading || !supabase) return;
+    if (!ready) return;
 
     const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
-    const isOnboarding = pathname.startsWith(ONBOARDING_PATH);
+    const isOnboarding = pathname.startsWith(ONBOARDING_PREFIX);
     const isDashboard = pathname.startsWith("/dashboard");
 
     if (!isAuthenticated && !isPublic && !isOnboarding) {
-      router.push("/login");
-    } else if (isAuthenticated && pathname === "/login") {
-      router.push(hasCompletedOnboarding ? "/dashboard" : "/onboarding");
-    } else if (isAuthenticated && isDashboard && !hasCompletedOnboarding) {
-      router.push("/onboarding");
-    } else if (isAuthenticated && isOnboarding && hasCompletedOnboarding) {
-      router.push("/dashboard");
+      router.replace("/login");
+      return;
     }
-  }, [mounted, loading, isAuthenticated, hasCompletedOnboarding, pathname, router]);
+    if (isAuthenticated && pathname === "/login") {
+      router.replace(hasCompletedOnboarding ? "/dashboard" : "/onboarding");
+      return;
+    }
+    if (isAuthenticated && isDashboard && !hasCompletedOnboarding) {
+      router.replace("/onboarding");
+      return;
+    }
+    if (isAuthenticated && isOnboarding && hasCompletedOnboarding) {
+      router.replace("/dashboard");
+      return;
+    }
+  }, [ready, isAuthenticated, hasCompletedOnboarding, pathname, router]);
 
-  if (!mounted || loading) {
+  // ── Loading splash ────────────────────────────────────────
+  if (!ready) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(var(--primary),0.4)] animate-pulse">
-            <span className="font-bold text-background text-xl">B</span>
+          <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.4)]">
+            <span className="font-bold text-primary-foreground text-2xl">B</span>
           </div>
-          <p className="text-muted-foreground text-sm font-medium tracking-widest uppercase animate-pulse">Initializing...</p>
+          <div className="flex gap-1.5">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="w-2 h-2 bg-primary rounded-full animate-bounce"
+                style={{ animationDelay: `${i * 0.15}s` }}
+              />
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
+  // Block unauthenticated access to protected routes (SSR-safe)
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
-  if (!isAuthenticated && !isPublic && !pathname.startsWith(ONBOARDING_PATH)) {
+  const isOnboarding = pathname.startsWith(ONBOARDING_PREFIX);
+  if (!isAuthenticated && !isPublic && !isOnboarding) {
     return null;
   }
 
   return <>{children}</>;
+}
+
+// ── Helper ─────────────────────────────────────────────────
+async function hydrateUser(supabaseUser: User) {
+  const membership = await getBusinessMembership(supabaseUser.id);
+  const role = (membership?.role ?? null) as "admin" | "staff" | null;
+  const permissions =
+    role === "admin"
+      ? ADMIN_PERMISSIONS
+      : role === "staff"
+      ? [...STAFF_PERMISSIONS, ...(membership?.permissions ?? [])]
+      : [];
+
+  useAuthStore.getState().setSession(
+    {
+      id: supabaseUser.id,
+      email: supabaseUser.email ?? "",
+      name: supabaseUser.user_metadata?.full_name as string | undefined,
+      avatar_url: supabaseUser.user_metadata?.avatar_url as string | undefined,
+    },
+    membership?.business_id ?? null,
+    membership?.businesses?.name ?? null,
+    role,
+    permissions,
+    !!membership?.business_id,
+  );
 }
