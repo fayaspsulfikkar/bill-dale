@@ -27,6 +27,26 @@ export default function BusinessSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  // PIN management
+  const [pinForm, setPinForm] = useState({ newPin: "", confirmPin: "" });
+  const [pinError, setPinError] = useState("");
+  const [pinSaved, setPinSaved] = useState(false);
+  const [savingPin, setSavingPin] = useState(false);
+
+  const handleSavePin = async () => {
+    if (pinForm.newPin.length < 4) { setPinError("PIN must be at least 4 digits."); return; }
+    if (pinForm.newPin !== pinForm.confirmPin) { setPinError("PINs do not match."); return; }
+    if (!businessId) return;
+    setPinError("");
+    setSavingPin(true);
+    await db.businesses.update(businessId, { admin_pin: pinForm.newPin } as never);
+    if (supabase) await supabase.from("businesses").update({ admin_pin: pinForm.newPin }).eq("id", businessId);
+    setSavingPin(false);
+    setPinSaved(true);
+    setPinForm({ newPin: "", confirmPin: "" });
+    setTimeout(() => setPinSaved(false), 3000);
+  };
+
   useEffect(() => {
     if (business) setForm({ ...form, ...business });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -94,6 +114,49 @@ export default function BusinessSettingsPage() {
             </CardContent>
           </Card>
 
+          <Card className="bg-card/50 border-border/50">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">🔐 Staff Mode PIN</CardTitle>
+              <CardDescription>
+                This PIN is required to exit Staff Mode or access locked sections.
+                Must be 4–8 digits. Keep it private.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>New PIN (4–8 digits)</Label>
+                <Input
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={8}
+                  value={pinForm.newPin}
+                  onChange={(e) => setPinForm({ ...pinForm, newPin: e.target.value.replace(/\D/g, "") })}
+                  placeholder="••••"
+                  className="bg-background/50 font-mono tracking-widest text-center"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Confirm PIN</Label>
+                <Input
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={8}
+                  value={pinForm.confirmPin}
+                  onChange={(e) => setPinForm({ ...pinForm, confirmPin: e.target.value.replace(/\D/g, "") })}
+                  placeholder="••••"
+                  className="bg-background/50 font-mono tracking-widest text-center"
+                />
+              </div>
+              {pinError && <p className="col-span-2 text-destructive text-xs">{pinError}</p>}
+              {pinSaved && <p className="col-span-2 text-green-400 text-xs">✅ PIN updated successfully!</p>}
+              <div className="col-span-2">
+                <Button type="button" variant="outline" onClick={handleSavePin} disabled={savingPin} className="w-full max-w-xs">
+                  {savingPin ? "Saving…" : "Set / Update PIN"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           <Button type="submit" disabled={saving} className="w-full max-w-xs h-11 font-semibold">
             {saving ? "Saving..." : saved ? "✅ Saved!" : "Save Changes"}
           </Button>
@@ -102,3 +165,4 @@ export default function BusinessSettingsPage() {
     </RoleGuard>
   );
 }
+

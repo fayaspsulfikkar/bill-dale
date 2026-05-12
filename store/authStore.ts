@@ -17,6 +17,10 @@ interface AuthState {
   hasCompletedOnboarding: boolean;
   isAuthenticated: boolean;
 
+  // Staff mode — locks sensitive UI behind admin PIN
+  staffMode: boolean;
+  setStaffMode: (on: boolean) => void;
+
   setSession: (user: AuthUser, businessId: string | null, businessName: string | null, role: 'admin' | 'staff' | null, permissions: string[], hasOnboarded: boolean) => void;
   clearSession: () => void;
   setOnboardingComplete: (businessId: string, businessName: string) => void;
@@ -35,6 +39,9 @@ export const useAuthStore = create<AuthState>()(
       permissions: [],
       hasCompletedOnboarding: false,
       isAuthenticated: false,
+      staffMode: false,
+
+      setStaffMode: (on) => set({ staffMode: on }),
 
       setSession: (user, businessId, businessName, role, permissions, hasOnboarded) =>
         set({
@@ -56,6 +63,7 @@ export const useAuthStore = create<AuthState>()(
           permissions: [],
           hasCompletedOnboarding: false,
           isAuthenticated: false,
+          staffMode: false,
         }),
 
       setOnboardingComplete: (businessId, businessName) =>
@@ -72,6 +80,7 @@ export const useAuthStore = create<AuthState>()(
           permissions: [],
           hasCompletedOnboarding: false,
           isAuthenticated: false,
+          staffMode: false,
         }),
     }),
     { name: 'bill-dale-auth' }
