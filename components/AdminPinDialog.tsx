@@ -97,7 +97,7 @@ export function AdminPinDialog({
           style={{
             backdropFilter: "blur(32px) saturate(180%)",
             WebkitBackdropFilter: "blur(32px) saturate(180%)",
-            backgroundColor: "rgba(0, 0, 0, 0.25)",
+            backgroundColor: "rgba(0, 0, 0, 0.15)",
           }}
           onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         >
@@ -118,11 +118,11 @@ export function AdminPinDialog({
               animate={shake ? { x: [-10, 10, -7, 7, -4, 4, 0] } : {}}
               transition={{ duration: 0.45 }}
               style={{
-                background: "rgba(255, 255, 255, 0.025)",
-                backdropFilter: "blur(48px) saturate(180%)",
-                WebkitBackdropFilter: "blur(48px) saturate(180%)",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-                boxShadow: "0 32px 80px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.03) inset, 0 1px 0 rgba(255,255,255,0.1) inset",
+                background: "rgba(255, 255, 255, 0.012)",
+                backdropFilter: "blur(56px) saturate(160%)",
+                WebkitBackdropFilter: "blur(56px) saturate(160%)",
+                border: "1px solid rgba(255, 255, 255, 0.07)",
+                boxShadow: "0 32px 80px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.025) inset, 0 1px 0 rgba(255,255,255,0.08) inset",
               }}
               className="rounded-3xl p-8"
             >
@@ -147,8 +147,8 @@ export function AdminPinDialog({
                 >
                   <Shield className="w-7 h-7 text-primary" />
                 </div>
-                <h2 className="text-xl font-bold text-white tracking-tight">{title}</h2>
-                <p className="text-sm text-white/50 mt-1.5">Enter your admin PIN to continue</p>
+                <h2 className="text-xl font-bold tracking-tight" style={{ color: "rgba(255,255,255,1)", textShadow: "0 1px 8px rgba(0,0,0,0.5)" }}>{title}</h2>
+                <p className="text-sm mt-1.5" style={{ color: "rgba(255,255,255,0.8)", textShadow: "0 1px 4px rgba(0,0,0,0.4)" }}>Enter your admin PIN to continue</p>
               </div>
 
               {/* Error */}
@@ -181,11 +181,13 @@ export function AdminPinDialog({
                   onChange={(e) => { setPin(e.target.value.replace(/\D/g, "")); setError(""); }}
                   onKeyDown={(e) => e.key === "Enter" && handleVerify()}
                   placeholder="• • • •"
-                  className="w-full h-14 px-5 pr-14 rounded-2xl text-2xl font-mono tracking-[0.6em] text-center text-white placeholder-white/20 focus:outline-none transition-all"
+                  className="w-full h-14 px-5 pr-14 rounded-2xl text-2xl font-mono tracking-[0.6em] text-center focus:outline-none transition-all"
                   style={{
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.07)",
-                    boxShadow: "0 4px 16px rgba(0,0,0,0.15) inset",
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.1) inset",
+                    color: "rgba(255,255,255,1)",
+                    caretColor: "white",
                   }}
                   onFocus={(e) => {
                     e.currentTarget.style.border = "1px solid rgba(99,102,241,0.35)";
@@ -199,7 +201,7 @@ export function AdminPinDialog({
                 <button
                   type="button"
                   onClick={() => { setShow((s) => !s); setTimeout(() => inputRef.current?.focus(), 50); }}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/70 transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors"
                 >
                   {show ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
                 </button>
@@ -234,7 +236,7 @@ export function AdminPinDialog({
               </motion.button>
 
               {/* Hint */}
-              <p className="text-center text-white/25 text-xs mt-4">Press Enter to unlock</p>
+              <p className="text-center text-xs mt-4" style={{ color: "rgba(255,255,255,0.55)", textShadow: "0 1px 4px rgba(0,0,0,0.4)" }}>Press Enter to unlock</p>
             </motion.div>
           </motion.div>
         </motion.div>
