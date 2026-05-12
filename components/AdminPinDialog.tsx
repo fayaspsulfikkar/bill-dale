@@ -55,7 +55,6 @@ export function AdminPinDialog({
     setError("");
     try {
       if (!supabase || !businessId) {
-        // Demo mode — accept any 4+ digit PIN
         onSuccess();
         return;
       }
@@ -93,51 +92,78 @@ export function AdminPinDialog({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: 0.25 }}
           className="fixed inset-0 z-[999] flex items-center justify-center"
-          style={{ backdropFilter: "blur(20px)", backgroundColor: "rgba(0,0,0,0.75)" }}
+          style={{
+            backdropFilter: "blur(32px) saturate(180%)",
+            WebkitBackdropFilter: "blur(32px) saturate(180%)",
+            backgroundColor: "rgba(0, 0, 0, 0.45)",
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         >
-          {/* Subtle background glow */}
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl" />
+          {/* Ambient glow blobs */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-primary/20 blur-[120px]" />
+            <div className="absolute bottom-1/3 left-1/3 w-64 h-64 rounded-full bg-violet-500/10 blur-[100px]" />
           </div>
 
           <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 24 }}
+            initial={{ scale: 0.88, opacity: 0, y: 32 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 10 }}
-            transition={{ type: "spring", stiffness: 300, damping: 26 }}
-            className="relative w-full max-w-sm mx-4"
+            exit={{ scale: 0.93, opacity: 0, y: 16 }}
+            transition={{ type: "spring", stiffness: 320, damping: 28 }}
+            className="relative w-full max-w-sm mx-5"
           >
-            {/* Close */}
-            <button
-              onClick={onClose}
-              className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-card border border-border/50 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors z-10"
+            <motion.div
+              animate={shake ? { x: [-10, 10, -7, 7, -4, 4, 0] } : {}}
+              transition={{ duration: 0.45 }}
+              style={{
+                background: "rgba(255, 255, 255, 0.06)",
+                backdropFilter: "blur(40px) saturate(200%)",
+                WebkitBackdropFilter: "blur(40px) saturate(200%)",
+                border: "1px solid rgba(255, 255, 255, 0.12)",
+                boxShadow: "0 32px 80px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05) inset, 0 1px 0 rgba(255,255,255,0.15) inset",
+              }}
+              className="rounded-3xl p-8"
             >
-              <X className="w-4 h-4" />
-            </button>
+              {/* Close */}
+              <button
+                onClick={onClose}
+                style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)" }}
+                className="absolute top-5 right-5 w-8 h-8 rounded-full flex items-center justify-center text-white/50 hover:text-white/90 transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
 
-            <div className="bg-card border border-border/50 rounded-3xl p-8 shadow-2xl">
-
-              {/* Icon + Title */}
-              <div className="flex flex-col items-center text-center mb-8">
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4 shadow-[0_0_40px_rgba(99,102,241,0.2)]">
-                  <Shield className="w-8 h-8 text-primary" />
+              {/* Icon */}
+              <div className="flex flex-col items-center text-center mb-7">
+                <div
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
+                  style={{
+                    background: "rgba(99,102,241,0.15)",
+                    border: "1px solid rgba(99,102,241,0.3)",
+                    boxShadow: "0 0 40px rgba(99,102,241,0.25)",
+                  }}
+                >
+                  <Shield className="w-7 h-7 text-primary" />
                 </div>
-                <h2 className="text-xl font-bold tracking-tight">{title}</h2>
-                <p className="text-sm text-muted-foreground mt-1">Enter your admin PIN to continue</p>
+                <h2 className="text-xl font-bold text-white tracking-tight">{title}</h2>
+                <p className="text-sm text-white/50 mt-1.5">Enter your admin PIN to continue</p>
               </div>
 
               {/* Error */}
               <AnimatePresence>
                 {error && (
                   <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden mb-4"
+                    initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                    animate={{ opacity: 1, height: "auto", marginBottom: 16 }}
+                    exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                    className="overflow-hidden"
                   >
-                    <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm text-center">
+                    <div
+                      className="p-3 rounded-xl text-red-300 text-sm text-center"
+                      style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.2)" }}
+                    >
                       {error}
                     </div>
                   </motion.div>
@@ -145,11 +171,7 @@ export function AdminPinDialog({
               </AnimatePresence>
 
               {/* PIN input */}
-              <motion.div
-                animate={shake ? { x: [-8, 8, -6, 6, -4, 4, 0] } : {}}
-                transition={{ duration: 0.4 }}
-                className="relative mb-6"
-              >
+              <div className="relative mb-5">
                 <input
                   ref={inputRef}
                   type={show ? "text" : "password"}
@@ -159,54 +181,28 @@ export function AdminPinDialog({
                   onChange={(e) => { setPin(e.target.value.replace(/\D/g, "")); setError(""); }}
                   onKeyDown={(e) => e.key === "Enter" && handleVerify()}
                   placeholder="• • • •"
-                  className="w-full h-16 px-6 pr-14 rounded-2xl bg-secondary border border-border/50 text-3xl font-mono tracking-[0.5em] text-center focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50 transition-all"
+                  className="w-full h-14 px-5 pr-14 rounded-2xl text-2xl font-mono tracking-[0.6em] text-center text-white placeholder-white/20 focus:outline-none transition-all"
+                  style={{
+                    background: "rgba(255,255,255,0.07)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    boxShadow: "0 4px 24px rgba(0,0,0,0.2) inset",
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.border = "1px solid rgba(99,102,241,0.5)";
+                    e.currentTarget.style.boxShadow = "0 4px 24px rgba(0,0,0,0.2) inset, 0 0 0 3px rgba(99,102,241,0.12)";
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.border = "1px solid rgba(255,255,255,0.12)";
+                    e.currentTarget.style.boxShadow = "0 4px 24px rgba(0,0,0,0.2) inset";
+                  }}
                 />
                 <button
                   type="button"
-                  onClick={() => setShow((s) => !s)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => { setShow((s) => !s); setTimeout(() => inputRef.current?.focus(), 50); }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/70 transition-colors"
                 >
-                  {show ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {show ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
                 </button>
-              </motion.div>
-
-              {/* Number pad */}
-              <div className="grid grid-cols-3 gap-2.5 mb-5">
-                {[1,2,3,4,5,6,7,8,9].map((n) => (
-                  <motion.button
-                    key={n}
-                    whileHover={{ scale: 1.04 }}
-                    whileTap={{ scale: 0.94 }}
-                    onClick={() => { if (pin.length < 8) { setPin((p) => p + n); setError(""); } }}
-                    className="h-14 rounded-xl bg-secondary hover:bg-secondary/80 border border-border/30 text-lg font-semibold transition-colors"
-                  >
-                    {n}
-                  </motion.button>
-                ))}
-                <motion.button
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.94 }}
-                  onClick={() => setPin("")}
-                  className="h-14 rounded-xl bg-secondary hover:bg-secondary/80 border border-border/30 text-sm font-semibold text-muted-foreground transition-colors"
-                >
-                  Clear
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.94 }}
-                  onClick={() => { if (pin.length < 8) { setPin((p) => p + 0); setError(""); } }}
-                  className="h-14 rounded-xl bg-secondary hover:bg-secondary/80 border border-border/30 text-lg font-semibold transition-colors"
-                >
-                  0
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.94 }}
-                  onClick={() => setPin((p) => p.slice(0, -1))}
-                  className="h-14 rounded-xl bg-secondary hover:bg-secondary/80 border border-border/30 text-xl font-semibold text-muted-foreground transition-colors"
-                >
-                  ⌫
-                </motion.button>
               </div>
 
               {/* Unlock button */}
@@ -215,11 +211,31 @@ export function AdminPinDialog({
                 disabled={checking || pin.length < 4}
                 whileHover={{ scale: pin.length >= 4 ? 1.02 : 1 }}
                 whileTap={{ scale: pin.length >= 4 ? 0.97 : 1 }}
-                className="w-full h-13 py-3.5 bg-primary text-primary-foreground font-bold rounded-2xl text-base disabled:opacity-40 transition-all shadow-[0_0_20px_rgba(99,102,241,0.3)]"
+                className="w-full h-13 py-3.5 font-bold rounded-2xl text-base transition-all text-white relative overflow-hidden disabled:opacity-40"
+                style={{
+                  background: pin.length >= 4
+                    ? "linear-gradient(135deg, rgba(99,102,241,0.9) 0%, rgba(139,92,246,0.9) 100%)"
+                    : "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(99,102,241,0.4)",
+                  boxShadow: pin.length >= 4 ? "0 8px 32px rgba(99,102,241,0.35)" : "none",
+                  backdropFilter: "blur(10px)",
+                }}
               >
-                {checking ? "Verifying…" : "Unlock"}
+                <span className="relative z-10">
+                  {checking ? "Verifying…" : "Unlock"}
+                </span>
+                {/* Shine */}
+                {pin.length >= 4 && (
+                  <div
+                    className="absolute inset-0 rounded-2xl pointer-events-none"
+                    style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.12) 0%, transparent 60%)" }}
+                  />
+                )}
               </motion.button>
-            </div>
+
+              {/* Hint */}
+              <p className="text-center text-white/25 text-xs mt-4">Press Enter to unlock</p>
+            </motion.div>
           </motion.div>
         </motion.div>
       )}
