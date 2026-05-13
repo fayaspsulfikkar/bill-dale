@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Shield, Eye, EyeOff, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
+import db from "@/offline/db";
 
 interface AdminPinDialogProps {
   open: boolean;
@@ -54,22 +55,42 @@ export function AdminPinDialog({
     setChecking(true);
     setError("");
     try {
-      if (!supabase || !businessId) {
+      if (!businessId) {
         onSuccess();
         return;
       }
-      const { data, error: dbErr } = await supabase
-        .from("businesses")
-        .select("admin_pin")
-        .eq("id", businessId)
-        .single();
+      
+      let actualPin: string | null | undefined = null;
 
-      if (dbErr || !data?.admin_pin) {
+      // 1. Try Supabase first
+      if (supabase) {
+        const { data, error: dbErr } = await supabase
+          .from("businesses")
+          .select("admin_pin")
+          .eq("id", businessId)
+          .maybeSingle(); // Use maybeSingle to avoid throw on 0 rows
+          
+        if (!dbErr && data?.admin_pin) {
+          actualPin = data.admin_pin;
+        }
+      }
+
+      // 2. Fallback to Dexie if Supabase failed or returned nothing (offline mode)
+      if (!actualPin) {
+        const localBiz = await db.businesses.get(businessId);
+        if (localBiz?.admin_pin) {
+          actualPin = localBiz.admin_pin;
+        }
+      }
+
+      // 3. Verify
+      if (!actualPin) {
         setError("No PIN set. Go to Settings to create one first.");
         triggerShake();
         return;
       }
-      if (data.admin_pin === pin) {
+
+      if (actualPin === pin) {
         onSuccess();
       } else {
         setError("Incorrect PIN. Try again.");
