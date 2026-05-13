@@ -3,14 +3,14 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, Eye, EyeOff, X } from "lucide-react";
+import { Shield, Eye, EyeOff, X, Clock } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import db from "@/offline/db";
 
 interface AdminPinDialogProps {
   open: boolean;
-  onSuccess: () => void;
+  onSuccess: (unlockUntil?: number) => void;
   onClose: () => void;
   title?: string;
 }
@@ -26,6 +26,7 @@ export function AdminPinDialog({
   const [error, setError] = useState("");
   const [checking, setChecking] = useState(false);
   const [shake, setShake] = useState(false);
+  const [durationMins, setDurationMins] = useState(10);
   const { businessId } = useAuthStore();
   const inputRef = useRef<HTMLInputElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -91,7 +92,7 @@ export function AdminPinDialog({
       }
 
       if (actualPin === pin) {
-        onSuccess();
+        onSuccess(Date.now() + durationMins * 60 * 1000);
       } else {
         setError("Incorrect PIN. Try again.");
         setPin("");
@@ -226,6 +227,23 @@ export function AdminPinDialog({
                 >
                   {show ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
                 </button>
+              </div>
+
+              {/* Duration selection */}
+              <div className="flex items-center gap-2 mb-5">
+                <Clock className="w-4 h-4 text-white/50" />
+                <select
+                  value={durationMins}
+                  onChange={(e) => setDurationMins(Number(e.target.value))}
+                  className="w-full h-10 px-3 bg-white/5 border border-white/10 rounded-xl text-sm text-white/90 focus:outline-none focus:border-primary/50 appearance-none"
+                  style={{ backdropFilter: "blur(8px)" }}
+                >
+                  <option value={10} className="bg-slate-900 text-white">Unlock for 10 minutes</option>
+                  <option value={20} className="bg-slate-900 text-white">Unlock for 20 minutes</option>
+                  <option value={30} className="bg-slate-900 text-white">Unlock for 30 minutes</option>
+                  <option value={60} className="bg-slate-900 text-white">Unlock for 1 hour</option>
+                  <option value={120} className="bg-slate-900 text-white">Unlock for 2 hours</option>
+                </select>
               </div>
 
               {/* Unlock button */}

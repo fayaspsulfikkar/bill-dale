@@ -13,7 +13,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useThemeStore } from "@/store/themeStore";
 import { signOut } from "@/lib/auth";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import db from "@/offline/db";
 import { AdminPinDialog } from "@/components/AdminPinDialog";
@@ -39,11 +39,34 @@ const ALL_NAV_ITEMS: NavItem[] = [
 export function DashboardSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, businessId, businessName, staffMode, setStaffMode, clearSession } = useAuthStore();
+  const { user, businessId, businessName, staffMode, staffModeUnlockUntil, setStaffMode, clearSession } = useAuthStore();
   const { theme, setTheme } = useThemeStore();
   const [bizOpen, setBizOpen] = useState(false);
   const [pinTarget, setPinTarget] = useState<string | null>(null); // href to navigate after PIN
   const [pinForStaffMode, setPinForStaffMode] = useState(false); // PIN to DISABLE staff mode
+  const [timeLeftFormatted, setTimeLeftFormatted] = useState("");
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (!staffMode && staffModeUnlockUntil) {
+      const updateTimer = () => {
+        const diff = staffModeUnlockUntil - Date.now();
+        if (diff <= 0) {
+          setStaffMode(true);
+          setTimeLeftFormatted("");
+        } else {
+          const m = Math.floor(diff / 60000);
+          const s = Math.floor((diff % 60000) / 1000);
+          setTimeLeftFormatted(`${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`);
+        }
+      };
+      updateTimer();
+      interval = setInterval(updateTimer, 1000);
+    } else {
+      setTimeLeftFormatted("");
+    }
+    return () => clearInterval(interval);
+  }, [staffMode, staffModeUnlockUntil, setStaffMode]);
 
   // Multi-business: fetch all businesses this user is a member of
   const memberships = useLiveQuery(
@@ -215,10 +238,15 @@ export function DashboardSidebar() {
         {!staffMode ? (
           <button
             onClick={handleEnableStaffMode}
-            className="flex items-center gap-3 w-full px-4 py-2.5 rounded-xl text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 transition-colors text-sm"
+            className="flex items-center gap-3 w-full px-4 py-2.5 rounded-xl text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 transition-colors text-sm border border-transparent hover:border-amber-500/30"
           >
-            <UserCheck className="w-4 h-4" />
-            <span className="font-medium">Enable Staff Mode</span>
+            <Lock className="w-4 h-4" />
+            <span className="font-medium flex-1 text-left">Lock Session</span>
+            {timeLeftFormatted && (
+              <span className="text-[10px] font-mono bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded-md">
+                {timeLeftFormatted}
+              </span>
+            )}
           </button>
         ) : (
           <button
@@ -274,9 +302,10 @@ export function DashboardSidebar() {
       <AdminPinDialog
         open={!!pinTarget}
         title={`Admin PIN — ${ALL_NAV_ITEMS.find(i => i.href === pinTarget)?.name ?? "Access"}`}
-        onSuccess={() => {
+        onSuccess={(unlockUntil) => {
           const target = pinTarget!;
           setPinTarget(null);
+          setStaffMode(false, unlockUntil); // globally unlock
           router.push(target);
         }}
         onClose={() => setPinTarget(null)}
@@ -285,9 +314,9 @@ export function DashboardSidebar() {
       <AdminPinDialog
         open={pinForStaffMode}
         title="Exit Staff Mode"
-        onSuccess={() => {
+        onSuccess={(unlockUntil) => {
           setPinForStaffMode(false);
-          setStaffMode(false);
+          setStaffMode(false, unlockUntil); // globally unlock
         }}
         onClose={() => setPinForStaffMode(false)}
       />
