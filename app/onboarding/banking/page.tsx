@@ -36,10 +36,20 @@ export default function OnboardingBanking() {
 
   const [phase, setPhase] = useState<Phase>("banking");
 
-  // ── Phase 1: Save banking + business ─────────────────────
+  // ── Phase 1: Move to PIN ─────────────────────────────
   const handleFinish = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
+    setPhase("pin");
+    setTimeout(() => pinRef.current?.focus(), 200);
+  };
+
+  // ── Phase 2: Save everything (Business + Bank + PIN) ──────
+  const handleSetPin = async () => {
+    if (pinForm.pin.length < 4) { setPinError("PIN must be at least 4 digits."); return; }
+    if (pinForm.pin !== pinForm.confirm) { setPinError("PINs do not match."); return; }
+
+    setPinError("");
+    setSavingPin(true);
     try {
       const step1 = JSON.parse(sessionStorage.getItem("onboarding_step1") || "{}");
       const step2 = JSON.parse(sessionStorage.getItem("onboarding_step2") || "{}");
@@ -62,6 +72,7 @@ export default function OnboardingBanking() {
         account_number: form.accountNumber,
         ifsc: form.ifsc,
         upi_id: form.upiId,
+        admin_pin: pinForm.pin, // Set the PIN here
         created_at: new Date().toISOString(),
       };
 
@@ -93,32 +104,11 @@ export default function OnboardingBanking() {
       sessionStorage.removeItem("onboarding_step1");
       sessionStorage.removeItem("onboarding_step2");
 
-      setCurrentBusinessId(businessId);
-      // Move to PIN creation phase
-      setPhase("pin");
-      setTimeout(() => pinRef.current?.focus(), 200);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // ── Phase 2: Set staff mode PIN ───────────────────────────
-  const handleSetPin = async () => {
-    if (pinForm.pin.length < 4) { setPinError("PIN must be at least 4 digits."); return; }
-    if (pinForm.pin !== pinForm.confirm) { setPinError("PINs do not match."); return; }
-    if (!currentBusinessId) return;
-
-    setPinError("");
-    setSavingPin(true);
-    try {
-      await db.businesses.update(currentBusinessId, { admin_pin: pinForm.pin } as never);
-      if (supabase) {
-        await supabase.from("businesses").update({ admin_pin: pinForm.pin }).eq("id", currentBusinessId);
-      }
       setPhase("done");
       setTimeout(() => router.push("/dashboard"), 1800);
+    } catch (err) {
+      console.error(err);
+      setPinError("Failed to save. Please try again.");
     } finally {
       setSavingPin(false);
     }

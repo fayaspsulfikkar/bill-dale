@@ -28,6 +28,7 @@ export interface Business {
   ifsc?: string;
   upi_id?: string;
   signature_url?: string;
+  admin_pin?: string;
   tax_type: 'regular' | 'composition';
   created_at: string;
 }
