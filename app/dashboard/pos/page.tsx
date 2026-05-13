@@ -128,18 +128,18 @@ export default function POSPage() {
             {filteredProducts.map(product => (
               <Card 
                 key={product.id} 
-                className="cursor-pointer hover:border-primary/50 transition-colors bg-card/30 active:scale-95"
+                className="cursor-pointer border-border/30 hover:border-primary/50 transition-all bg-card/40 hover:bg-card/80 hover:-translate-y-1 hover:shadow-lg active:scale-[0.98] group"
                 onClick={() => addItem(product)}
               >
-                <CardContent className="p-4 flex flex-col h-full justify-between gap-2">
+                <CardContent className="p-4 flex flex-col h-full justify-between gap-3">
                   <div>
-                    <p className="text-xs font-mono text-muted-foreground">{product.sku}</p>
-                    <p className="font-bold leading-tight mt-1">{product.name}</p>
-                    <p className="text-sm text-muted-foreground">{product.brand} - {product.size}</p>
+                    <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">{product.sku}</p>
+                    <p className="font-bold leading-tight mt-1 text-base group-hover:text-primary transition-colors">{product.name}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{product.brand} • {product.size}</p>
                   </div>
-                  <div className="flex justify-between items-end mt-2">
-                    <p className="font-black text-primary text-lg">${product.price.toFixed(2)}</p>
-                    <span className="text-[10px] uppercase bg-secondary px-1.5 py-0.5 rounded text-secondary-foreground font-bold">
+                  <div className="flex justify-between items-end mt-2 pt-2 border-t border-border/20">
+                    <p className="font-black text-foreground text-lg">${product.price.toFixed(2)}</p>
+                    <span className="text-[10px] uppercase bg-secondary/50 text-secondary-foreground px-2 py-0.5 rounded-full font-bold">
                       +{product.gst_percent}% GST
                     </span>
                   </div>
@@ -164,22 +164,22 @@ export default function POSPage() {
               <p>Cart is empty</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {items.map(item => (
-                <div key={item.product.id} className="flex gap-3 bg-background/50 p-3 rounded-lg border border-border/30 relative group">
+                <div key={item.product.id} className="flex gap-3 bg-background/50 p-3 rounded-xl border border-border/30 hover:border-border/60 transition-colors relative group shadow-sm">
                   <div className="flex-1">
                     <p className="font-bold text-sm leading-tight pr-6">{item.product.name}</p>
-                    <p className="text-xs text-muted-foreground">{item.product.sku} | Size {item.product.size}</p>
-                    <p className="font-mono text-primary font-bold mt-1">${(item.product.price * item.quantity).toFixed(2)}</p>
+                    <p className="text-[10px] text-muted-foreground tracking-wide mt-0.5">{item.product.sku} • Size {item.product.size}</p>
+                    <p className="font-mono text-foreground font-bold mt-1.5">${(item.product.price * item.quantity).toFixed(2)}</p>
                   </div>
                   <div className="flex flex-col items-center justify-between">
-                    <button onClick={() => removeItem(item.product.id)} className="absolute top-2 right-2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Trash2 className="w-4 h-4" />
+                    <button onClick={() => removeItem(item.product.id)} className="absolute top-2 right-2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-background rounded-md border border-border/50">
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
-                    <div className="flex items-center gap-2 mt-auto bg-secondary rounded-md p-1">
-                      <button onClick={() => updateQuantity(item.product.id, item.quantity - 1)} className="p-1 hover:bg-background rounded text-foreground"><Minus className="w-3 h-3" /></button>
+                    <div className="flex items-center gap-2 mt-auto bg-secondary/50 rounded-lg p-0.5 border border-border/20">
+                      <button onClick={() => updateQuantity(item.product.id, item.quantity - 1)} className="p-1 hover:bg-background rounded-md text-foreground transition-colors"><Minus className="w-3 h-3" /></button>
                       <span className="text-sm font-bold w-4 text-center">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.product.id, item.quantity + 1)} className="p-1 hover:bg-background rounded text-foreground"><Plus className="w-3 h-3" /></button>
+                      <button onClick={() => updateQuantity(item.product.id, item.quantity + 1)} className="p-1 hover:bg-background rounded-md text-foreground transition-colors"><Plus className="w-3 h-3" /></button>
                     </div>
                   </div>
                 </div>
@@ -188,39 +188,39 @@ export default function POSPage() {
           )}
         </ScrollArea>
 
-        <div className="p-4 bg-background border-t border-border/50 space-y-3">
+        <div className="p-5 bg-background/80 backdrop-blur-md border-t border-border/50 space-y-3 relative z-10 shadow-[0_-10px_30px_-15px_rgba(0,0,0,0.5)]">
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Subtotal</span>
-            <span className="font-mono">${subtotal.toFixed(2)}</span>
+            <span className="text-muted-foreground font-medium">Subtotal</span>
+            <span className="font-mono font-medium">${subtotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">GST (Tax)</span>
-            <span className="font-mono">${taxAmount.toFixed(2)}</span>
+            <span className="text-muted-foreground font-medium">GST (Tax)</span>
+            <span className="font-mono font-medium">${taxAmount.toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-sm items-center">
-            <span className="text-muted-foreground flex items-center gap-2">
+            <span className="text-muted-foreground font-medium flex items-center gap-2">
               Discount
               <Input 
                 type="number" 
-                className="w-20 h-7 text-right bg-secondary/50 border-none" 
+                className="w-20 h-7 text-right bg-secondary/50 border-none font-mono text-xs rounded-md" 
                 value={discount || ''} 
                 onChange={e => setDiscount(parseFloat(e.target.value) || 0)}
                 placeholder="0.00"
               />
             </span>
-            <span className="font-mono text-destructive">-${discount.toFixed(2)}</span>
+            <span className="font-mono text-destructive font-medium">-${discount.toFixed(2)}</span>
           </div>
-          <div className="border-t border-border/50 pt-3 flex justify-between items-center">
-            <span className="font-bold text-lg">Total</span>
-            <span className="font-black text-3xl text-primary font-mono">${total.toFixed(2)}</span>
+          <div className="border-t border-border/30 pt-4 pb-2 flex justify-between items-end">
+            <span className="font-bold text-lg text-muted-foreground uppercase tracking-wider">Total</span>
+            <span className="font-black text-4xl text-primary font-mono drop-shadow-sm">${total.toFixed(2)}</span>
           </div>
 
           <Button 
-            className="w-full h-14 text-lg font-black uppercase tracking-wider" 
+            className="w-full h-14 text-base font-black uppercase tracking-widest rounded-xl shadow-[0_0_20px_rgba(var(--primary),0.2)] hover:shadow-[0_0_30px_rgba(var(--primary),0.4)] transition-all" 
             disabled={items.length === 0}
             onClick={() => setIsCheckoutOpen(true)}
           >
-            <Receipt className="w-5 h-5 mr-2" /> Pay Now
+            <Receipt className="w-5 h-5 mr-2" /> Complete Order
           </Button>
         </div>
       </div>

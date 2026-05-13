@@ -108,7 +108,7 @@ export function DashboardSidebar() {
   const handleDisableStaffMode = () => setPinForStaffMode(true);
 
   return (
-    <div className="w-64 h-screen border-r border-border/50 bg-card/30 backdrop-blur-xl flex flex-col fixed left-0 top-0 z-40">
+    <div className="w-64 h-screen border-r border-border/20 bg-background/40 backdrop-blur-3xl flex flex-col fixed left-0 top-0 z-40 shadow-[10px_0_30px_-15px_rgba(0,0,0,0.5)]">
 
       {/* Business Switcher */}
       <div className="relative border-b border-border/30">
