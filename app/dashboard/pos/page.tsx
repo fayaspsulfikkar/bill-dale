@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { PrintThermalReceipt } from "@/components/pos/PrintThermalReceipt";
 import { PrintA4Invoice } from "@/components/pos/PrintA4Invoice";
-import { CustomerPanel } from "@/components/pos/CustomerPanel";
+import { CheckoutCustomerPanel } from "@/components/pos/CheckoutCustomerPanel";
 import { HeldOrdersDrawer } from "@/components/pos/HeldOrdersDrawer";
 import { ReturnExchangeModal } from "@/components/pos/ReturnExchangeModal";
 import { RecentOrdersDrawer } from "@/components/pos/RecentOrdersDrawer";
@@ -454,8 +454,6 @@ export default function POSPage() {
             </span>
           </div>
         )}
-        {/* Customer panel */}
-        <CustomerPanel />
         <div className="p-3 bg-card border-b border-border/60 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <div className="bg-primary/10 p-1.5 rounded-lg">
@@ -559,55 +557,60 @@ export default function POSPage() {
 
       {/* Checkout Dialog */}
       <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
-        <DialogContent className="sm:max-w-5xl w-[95vw] bg-card border-border/60 shadow-2xl p-0 overflow-hidden">
-          <div className="flex h-[80vh] min-h-[500px] max-h-[700px]">
-            {/* Left Column: Summary & Quick Cash */}
-            <div className="w-1/3 bg-muted/10 border-r border-border/60 flex flex-col">
-              <DialogHeader className="px-6 py-6 border-b border-border/60 bg-background/50 backdrop-blur-sm">
+        <DialogContent className="sm:max-w-6xl w-[95vw] bg-card border-border/60 shadow-2xl p-0 overflow-hidden">
+          <div className="flex h-[85vh] min-h-[550px] max-h-[750px]">
+            {/* Left Column: Customer & Summary */}
+            <div className="w-[40%] bg-muted/10 border-r border-border/60 flex flex-col">
+              <DialogHeader className="px-6 py-5 border-b border-border/60 bg-background/50 backdrop-blur-sm shrink-0">
                 <DialogTitle className="text-2xl font-black tracking-tight">Checkout</DialogTitle>
               </DialogHeader>
               
-              <div className="p-6 flex-1 overflow-y-auto space-y-8">
+              <div className="p-6 flex-1 overflow-y-auto space-y-6 flex flex-col">
+                {/* Customer Section */}
+                <CheckoutCustomerPanel />
+
+                <div className="flex-1" /> {/* Spacer */}
+
                 {/* Summary */}
                 <div className="space-y-4">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">Order Summary</h3>
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span className="font-mono font-medium">${subtotal.toFixed(2)}</span>
+                    <span className="font-mono font-medium">{formatINR(subtotal)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-muted-foreground">GST (Tax)</span>
-                    <span className="font-mono font-medium">${taxAmount.toFixed(2)}</span>
+                    <span className="font-mono font-medium">{formatINR(taxAmount)}</span>
                   </div>
                   {discount > 0 && (
                     <div className="flex justify-between items-center text-sm text-green-600 dark:text-green-500">
                       <span>Discount</span>
-                      <span className="font-mono font-medium">-${discount.toFixed(2)}</span>
+                      <span className="font-mono font-medium">-{formatINR(discount)}</span>
                     </div>
                   )}
                   <div className="pt-4 mt-4 border-t border-border/60 flex justify-between items-end">
                     <span className="text-sm font-bold uppercase text-muted-foreground">Total Due</span>
-                    <span className="text-4xl font-black text-primary font-mono tracking-tighter">${total.toFixed(2)}</span>
-                  </div>
-                </div>
-
-                {/* Quick Cash */}
-                <div className="space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Quick Cash</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button variant="outline" className="h-12 font-mono font-bold hover:bg-primary/5 hover:text-primary hover:border-primary/50 transition-colors" onClick={() => handleQuickCash(total)}>Exact: ${total.toFixed(2)}</Button>
-                    {[10, 20, 50, 100].map(amt => (
-                      <Button key={amt} variant="outline" className="h-12 font-mono font-bold hover:bg-primary/5 hover:text-primary hover:border-primary/50 transition-colors" onClick={() => handleQuickCash(amt)}>${amt}</Button>
-                    ))}
-                    <Button variant="outline" className="h-12 font-mono font-bold hover:bg-primary/5 hover:text-primary hover:border-primary/50 transition-colors" onClick={() => handleQuickCash(Math.ceil(total / 10) * 10)}>Next ${Math.ceil(total / 10) * 10}</Button>
+                    <span className="text-4xl font-black text-primary font-mono tracking-tighter">{formatINR(total)}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Right Column: Payment Details */}
-            <div className="flex-1 flex flex-col bg-background relative">
+            {/* Right Column: Quick Cash & Payment Details */}
+            <div className="flex-1 flex flex-col bg-background relative w-[60%]">
               <div className="p-8 flex-1 overflow-y-auto space-y-8">
+                {/* Quick Cash */}
+                <div className="space-y-4 pb-4 border-b border-border/40">
+                  <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Quick Cash Options</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button variant="outline" className="h-12 font-mono font-bold hover:bg-primary/5 hover:text-primary hover:border-primary/50 transition-colors" onClick={() => handleQuickCash(total)}>Exact: {formatINR(total)}</Button>
+                    {[100, 500, 1000, 2000].map(amt => (
+                      <Button key={amt} variant="outline" className="h-12 font-mono font-bold hover:bg-primary/5 hover:text-primary hover:border-primary/50 transition-colors" onClick={() => handleQuickCash(amt)}>{formatINR(amt)}</Button>
+                    ))}
+                    <Button variant="outline" className="h-12 font-mono font-bold hover:bg-primary/5 hover:text-primary hover:border-primary/50 transition-colors" onClick={() => handleQuickCash(Math.ceil(total / 100) * 100)}>Next {formatINR(Math.ceil(total / 100) * 100)}</Button>
+                  </div>
+                </div>
+
                 <div className="space-y-4">
                   <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Select Payment Method</Label>
                   <div className="grid grid-cols-4 gap-3">
