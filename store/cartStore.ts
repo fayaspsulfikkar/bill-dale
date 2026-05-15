@@ -4,13 +4,17 @@ import type { Product } from '@/offline/db';
 export interface CartItem {
   product: Product;
   quantity: number;
+  itemDiscount: number; // Flat discount on this specific item (per unit or total, let's say total for the line)
+  overridePrice?: number; // Custom unit price override
 }
 
 interface CartState {
   items: CartItem[];
-  discount: number; // Flat discount amount
+  discount: number; // Global flat discount
   addItem: (product: Product, quantity?: number) => void;
   updateQuantity: (productId: string, quantity: number) => void;
+  updateItemDiscount: (productId: string, discount: number) => void;
+  updateItemPrice: (productId: string, price: number | undefined) => void;
   removeItem: (productId: string) => void;
   setDiscount: (amount: number) => void;
   clearCart: () => void;
@@ -33,7 +37,7 @@ export const useCartStore = create<CartState>()((set, get) => ({
           ),
         };
       }
-      return { items: [...state.items, { product, quantity }] };
+      return { items: [...state.items, { product, quantity, itemDiscount: 0 }] };
     });
   },
 
@@ -41,6 +45,22 @@ export const useCartStore = create<CartState>()((set, get) => ({
     set((state) => ({
       items: state.items.map((item) =>
         item.product.id === productId ? { ...item, quantity: Math.max(1, quantity) } : item
+      ),
+    }));
+  },
+
+  updateItemDiscount: (productId, discount) => {
+    set((state) => ({
+      items: state.items.map((item) =>
+        item.product.id === productId ? { ...item, itemDiscount: Math.max(0, discount) } : item
+      ),
+    }));
+  },
+
+  updateItemPrice: (productId, price) => {
+    set((state) => ({
+      items: state.items.map((item) =>
+        item.product.id === productId ? { ...item, overridePrice: price } : item
       ),
     }));
   },
@@ -61,9 +81,14 @@ export const useCartStore = create<CartState>()((set, get) => ({
     let taxAmount = 0;
 
     items.forEach((item) => {
-      const itemTotal = item.product.price * item.quantity;
-      const itemTax = (itemTotal * item.product.gst_percent) / 100;
-      subtotal += itemTotal;
+      const unitPrice = item.overridePrice !== undefined ? item.overridePrice : item.product.price;
+      const baseLineTotal = unitPrice * item.quantity;
+      const lineTotalAfterItemDiscount = Math.max(0, baseLineTotal - item.itemDiscount);
+      
+      // Calculate tax on the discounted amount
+      const itemTax = (lineTotalAfterItemDiscount * item.product.gst_percent) / 100;
+      
+      subtotal += lineTotalAfterItemDiscount;
       taxAmount += itemTax;
     });
 

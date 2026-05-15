@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { format, isToday, parseISO, getHours } from "date-fns";
 import { DollarSign, ShoppingBag, ReceiptText, MapPin } from "lucide-react";
-import { GlassPanel } from "@/components/GlassPanel";
 
 export default function DashboardOverview() {
   const invoices = useLiveQuery(() => db.invoices.toArray()) || [];
@@ -67,53 +66,53 @@ export default function DashboardOverview() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <GlassPanel className="relative overflow-hidden rounded-xl bg-card/40 border border-primary/20 shadow-[inset_0_0_20px_rgba(var(--primary),0.1)] hover:shadow-[inset_0_0_30px_rgba(var(--primary),0.15)] transition-all">
-          <CardContent className="p-6 flex items-center gap-4 relative z-10">
-            <div className="p-3 bg-primary/20 rounded-xl shadow-inner">
+        <Card className="bg-card/50 border-primary/20 shadow-[inset_0_0_10px_rgba(var(--primary),0.05)]">
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="p-3 bg-primary/20 rounded-lg">
               <DollarSign className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Today's Revenue</p>
-              <h2 className="text-3xl font-black font-mono text-primary drop-shadow-sm">${todaysSales.toFixed(2)}</h2>
+              <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Today's Revenue</p>
+              <h2 className="text-3xl font-black font-mono text-primary">${todaysSales.toFixed(2)}</h2>
             </div>
           </CardContent>
-        </GlassPanel>
+        </Card>
 
-        <GlassPanel className="relative overflow-hidden rounded-xl bg-card/40 border border-border/50 hover:border-primary/30 transition-all">
-          <CardContent className="p-6 flex items-center gap-4 relative z-10">
-            <div className="p-3 bg-secondary rounded-xl shadow-inner">
+        <Card className="bg-card/50 border-border/50">
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="p-3 bg-secondary rounded-lg">
               <ReceiptText className="w-6 h-6 text-muted-foreground" />
             </div>
             <div>
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Total Revenue</p>
-              <h2 className="text-3xl font-black font-mono drop-shadow-sm">${totalSales.toFixed(2)}</h2>
+              <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Total Revenue</p>
+              <h2 className="text-3xl font-black font-mono">${totalSales.toFixed(2)}</h2>
             </div>
           </CardContent>
-        </GlassPanel>
+        </Card>
 
-        <GlassPanel className="relative overflow-hidden rounded-xl bg-card/40 border border-border/50 hover:border-primary/30 transition-all">
-          <CardContent className="p-6 flex items-center gap-4 relative z-10">
-            <div className="p-3 bg-secondary rounded-xl shadow-inner">
+        <Card className="bg-card/50 border-border/50">
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="p-3 bg-secondary rounded-lg">
               <ShoppingBag className="w-6 h-6 text-muted-foreground" />
             </div>
             <div>
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Total Orders</p>
-              <h2 className="text-3xl font-black font-mono drop-shadow-sm">{totalOrders}</h2>
+              <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Total Orders</p>
+              <h2 className="text-3xl font-black font-mono">{totalOrders}</h2>
             </div>
           </CardContent>
-        </GlassPanel>
+        </Card>
 
-        <GlassPanel className="relative overflow-hidden rounded-xl bg-card/40 border border-border/50 hover:border-primary/30 transition-all">
-          <CardContent className="p-6 flex items-center gap-4 relative z-10">
-            <div className="p-3 bg-secondary rounded-xl shadow-inner">
+        <Card className="bg-card/50 border-border/50">
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="p-3 bg-secondary rounded-lg">
               <MapPin className="w-6 h-6 text-muted-foreground" />
             </div>
             <div>
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Active Branches</p>
-              <h2 className="text-3xl font-black font-mono drop-shadow-sm">{branches.filter(b => b.is_active).length}</h2>
+              <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Active Branches</p>
+              <h2 className="text-3xl font-black font-mono">{branches.filter(b => b.is_active).length}</h2>
             </div>
           </CardContent>
-        </GlassPanel>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -128,8 +127,8 @@ export default function DashboardOverview() {
                 <BarChart data={branchData}>
                   <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val}`} />
-                  <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: '12px', boxShadow: '0 10px 30px -10px rgba(0,0,0,0.5)' }} />
-                  <Bar dataKey="sales" fill="var(--color-primary)" radius={[6, 6, 0, 0]} />
+                  <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{ backgroundColor: 'oklch(0.15 0 0)', border: '1px solid oklch(1 0 0 / 10%)' }} />
+                  <Bar dataKey="sales" fill="oklch(0.65 0.25 250)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -139,7 +138,7 @@ export default function DashboardOverview() {
         </Card>
 
         {/* Peak Hours */}
-        <Card className="bg-card/50 border-border/50 shadow-lg">
+        <Card className="bg-card/50 border-border/50">
           <CardHeader>
             <CardTitle>Peak Sales Hours (Order Frequency)</CardTitle>
           </CardHeader>
@@ -149,8 +148,8 @@ export default function DashboardOverview() {
                 <LineChart data={peakHoursData}>
                   <XAxis dataKey="time" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: '12px', boxShadow: '0 10px 30px -10px rgba(0,0,0,0.5)' }} />
-                  <Line type="monotone" dataKey="orders" stroke="var(--color-primary)" strokeWidth={4} dot={{ fill: 'var(--color-primary)', strokeWidth: 2 }} activeDot={{ r: 6, fill: 'var(--color-primary)' }} />
+                  <Tooltip contentStyle={{ backgroundColor: 'oklch(0.15 0 0)', border: '1px solid oklch(1 0 0 / 10%)' }} />
+                  <Line type="monotone" dataKey="orders" stroke="oklch(0.65 0.25 250)" strokeWidth={3} dot={{ fill: 'oklch(0.65 0.25 250)' }} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
@@ -160,7 +159,7 @@ export default function DashboardOverview() {
         </Card>
 
         {/* Top Selling Products */}
-        <Card className="bg-card/50 border-border/50 lg:col-span-2 shadow-lg">
+        <Card className="bg-card/50 border-border/50 lg:col-span-2">
           <CardHeader>
             <CardTitle>Top Selling Inventory</CardTitle>
           </CardHeader>
@@ -168,18 +167,18 @@ export default function DashboardOverview() {
             {topSelling.length > 0 ? (
               <div className="space-y-4">
                 {topSelling.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-4 bg-background/50 hover:bg-card rounded-xl border border-border/30 hover:border-primary/30 transition-all shadow-sm group">
+                  <div key={idx} className="flex items-center justify-between p-4 bg-background/50 rounded-lg border border-border/30">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 flex items-center justify-center bg-primary/10 text-primary font-black rounded-lg group-hover:bg-primary group-hover:text-primary-foreground transition-colors shadow-inner">
+                      <div className="w-8 h-8 flex items-center justify-center bg-primary/20 text-primary font-black rounded-md">
                         {idx + 1}
                       </div>
                       <div>
-                        <p className="font-bold text-base">{item.name}</p>
-                        <p className="text-xs text-muted-foreground font-mono tracking-widest mt-0.5">{item.sku}</p>
+                        <p className="font-bold">{item.name}</p>
+                        <p className="text-xs text-muted-foreground font-mono">{item.sku}</p>
                       </div>
                     </div>
-                    <div className="font-black text-xl">
-                      {item.sales} <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider ml-1">Units</span>
+                    <div className="font-bold text-lg">
+                      {item.sales} <span className="text-xs text-muted-foreground font-normal">Units</span>
                     </div>
                   </div>
                 ))}
