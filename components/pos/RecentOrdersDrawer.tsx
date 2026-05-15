@@ -71,11 +71,19 @@ export function RecentOrdersDrawer({ onStartReturn }: Props) {
   const allInvoicesRaw = useLiveQuery(() => db.invoices.toArray(), []) ?? [];
   const allInvoices = [...allInvoicesRaw].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 100);
 
+  const allCustomersRaw = useLiveQuery(() => db.customers.toArray(), []) ?? [];
+  const customerMap = new Map(allCustomersRaw.map(c => [c.id, c]));
+
   const filtered = search.trim()
-    ? allInvoices.filter(inv =>
-        inv.invoice_number?.toLowerCase().includes(search.toLowerCase()) ||
-        inv.id.toLowerCase().includes(search.toLowerCase())
-      )
+    ? allInvoices.filter(inv => {
+        const c = inv.customer_id ? customerMap.get(inv.customer_id) : null;
+        return (
+          inv.invoice_number?.toLowerCase().includes(search.toLowerCase()) ||
+          inv.id.toLowerCase().includes(search.toLowerCase()) ||
+          (c?.phone && c.phone.includes(search.trim())) ||
+          (c?.name && c.name.toLowerCase().includes(search.trim().toLowerCase()))
+        );
+      })
     : allInvoices;
 
   const groups = groupByDate(filtered);
@@ -122,7 +130,7 @@ export function RecentOrdersDrawer({ onStartReturn }: Props) {
       )}
 
       <Dialog open={showRecentOrders} onOpenChange={(v) => { setShowRecentOrders(v); if (!v) { setSelectedInvoice(null); setSearch(""); } }}>
-        <DialogContent className="sm:max-w-2xl bg-card border-border/60 shadow-2xl print:hidden p-0 overflow-hidden gap-0 flex flex-col max-h-[90vh]">
+        <DialogContent className="sm:max-w-2xl bg-card border-border/60 shadow-2xl print:hidden p-0 overflow-hidden gap-0 flex flex-col h-[85vh] max-h-[800px]">
           <DialogHeader className="px-6 py-4 border-b border-border/40 bg-muted/10 flex-row items-center justify-between space-y-0 shrink-0">
             <DialogTitle className="flex items-center gap-2 font-black text-lg">
               {selectedInvoice ? (
@@ -167,7 +175,7 @@ export function RecentOrdersDrawer({ onStartReturn }: Props) {
               <div className="px-5 py-3 border-b border-border/40 shrink-0">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input placeholder="Search by invoice number or ID…" className="pl-9 bg-background/50" value={search} onChange={e => setSearch(e.target.value)} />
+                  <Input placeholder="Search by invoice number, mobile, or name…" className="pl-9 bg-background/50" value={search} onChange={e => setSearch(e.target.value)} />
                 </div>
               </div>
 
