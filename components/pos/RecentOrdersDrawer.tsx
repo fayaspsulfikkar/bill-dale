@@ -146,7 +146,7 @@ export function RecentOrdersDrawer({ onStartReturn }: Props) {
           </DialogHeader>
 
           {!selectedInvoice ? (
-            <div className="flex flex-col flex-1 min-h-0">
+            <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
               {/* Stats bar */}
               <div className="grid grid-cols-3 divide-x divide-border/40 border-b border-border/40 bg-muted/5 shrink-0">
                 <div className="px-5 py-3">
@@ -227,7 +227,7 @@ export function RecentOrdersDrawer({ onStartReturn }: Props) {
               </ScrollArea>
             </div>
           ) : (
-            <div className="flex flex-col flex-1 min-h-0">
+            <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
               {/* Invoice meta */}
               <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-border/30 border-b border-border/40 bg-muted/5 shrink-0">
                 <div className="px-4 py-3">
