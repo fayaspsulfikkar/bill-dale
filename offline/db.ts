@@ -82,6 +82,8 @@ export interface Branch {
   location: string;
   contact: string;
   is_active: boolean;
+  branch_code?: string;
+  password?: string;
 }
 
 export interface Product {

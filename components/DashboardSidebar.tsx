@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useThemeStore } from "@/store/themeStore";
+import { usePOSStore } from "@/store/posStore";
 import { signOut } from "@/lib/auth";
 import Image from "next/image";
 import { useState, useEffect } from "react";
@@ -44,7 +45,12 @@ export function DashboardSidebar() {
   const [bizOpen, setBizOpen] = useState(false);
   const [pinTarget, setPinTarget] = useState<string | null>(null); // href to navigate after PIN
   const [pinForStaffMode, setPinForStaffMode] = useState(false); // PIN to DISABLE staff mode
+  const [pinForUnlink, setPinForUnlink] = useState(false); // PIN to unlink branch
   const [timeLeftFormatted, setTimeLeftFormatted] = useState("");
+  
+  const { selectedBranchId, setSelectedBranchId } = usePOSStore();
+  const branches = useLiveQuery(() => db.branches.toArray(), []);
+  const activeBranch = branches?.find(b => b.id === selectedBranchId);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -161,6 +167,35 @@ export function DashboardSidebar() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Active Branch Badge */}
+      <AnimatePresence>
+        {activeBranch && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="mx-3 mt-4 p-3 rounded-xl bg-primary/10 border border-primary/20 flex items-center gap-3 shadow-inner">
+              <div className="w-8 h-8 rounded-lg bg-background flex items-center justify-center shrink-0 shadow-sm border border-border/50">
+                <MapPin className="w-4 h-4 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] uppercase font-bold text-primary tracking-wider">Active Branch</p>
+                <p className="text-sm font-bold truncate text-foreground">{activeBranch.name}</p>
+              </div>
+              <button
+                onClick={() => setPinForUnlink(true)}
+                className="text-[10px] font-bold px-2 py-1 bg-background rounded border border-border/50 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-colors shadow-sm"
+                title="Unlink Device from Branch (Requires Admin PIN)"
+              >
+                UNLINK
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Staff mode banner */}
       <AnimatePresence>
@@ -319,6 +354,18 @@ export function DashboardSidebar() {
           setStaffMode(false, unlockUntil); // globally unlock
         }}
         onClose={() => setPinForStaffMode(false)}
+      />
+
+      <AdminPinDialog
+        open={pinForUnlink}
+        title="Unlink Device from Branch"
+        onSuccess={(unlockUntil) => {
+          setPinForUnlink(false);
+          setSelectedBranchId(null);
+          // Optional: also globally unlock staff mode so they can navigate
+          setStaffMode(false, unlockUntil);
+        }}
+        onClose={() => setPinForUnlink(false)}
       />
     </div>
   );

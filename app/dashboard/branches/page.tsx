@@ -18,6 +18,8 @@ export default function BranchesPage() {
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
   const [contact, setContact] = useState("");
+  const [branchCode, setBranchCode] = useState("");
+  const [password, setPassword] = useState("");
 
   const handleAddBranch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +29,8 @@ export default function BranchesPage() {
       location,
       contact,
       is_active: true,
+      branch_code: branchCode,
+      password: password,
     };
     await db.branches.add(newBranch);
     await db.sync_queue.add({
@@ -39,6 +43,8 @@ export default function BranchesPage() {
     setName("");
     setLocation("");
     setContact("");
+    setBranchCode("");
+    setPassword("");
   };
 
   const toggleActive = async (branch: Branch) => {
@@ -80,7 +86,17 @@ export default function BranchesPage() {
                 <Label>Contact Number</Label>
                 <Input required value={contact} onChange={e => setContact(e.target.value)} placeholder="+1 (555) 000-0000" className="bg-background/50" />
               </div>
-              <Button type="submit" className="w-full">Save Branch</Button>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Branch Code / ID</Label>
+                  <Input required value={branchCode} onChange={e => setBranchCode(e.target.value)} placeholder="e.g. BATH01" className="bg-background/50 font-mono uppercase" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Device Password</Label>
+                  <Input required type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="bg-background/50" />
+                </div>
+              </div>
+              <Button type="submit" className="w-full mt-2">Save Branch</Button>
             </form>
           </DialogContent>
         </Dialog>

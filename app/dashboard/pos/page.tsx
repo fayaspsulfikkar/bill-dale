@@ -22,6 +22,7 @@ import { RecentOrdersDrawer } from "@/components/pos/RecentOrdersDrawer";
 import { CashRegisterModal } from "@/components/pos/CashRegisterModal";
 import { QuickAddItemModal } from "@/components/pos/QuickAddItemModal";
 import { KeyboardShortcutsModal } from "@/components/pos/KeyboardShortcutsModal";
+import { BranchLoginModal } from "@/components/pos/BranchLoginModal";
 import { OnlineStatusBar } from "@/components/pos/OnlineStatusBar";
 import { LowStockAlertBar } from "@/components/pos/LowStockAlertBar";
 import { OrderNotesField } from "@/components/pos/OrderNotesField";
@@ -86,19 +87,11 @@ export default function POSPage() {
   const allProducts = useLiveQuery(() => db.products.toArray(), []) || [];
   const allInventory = useLiveQuery(() => db.inventory.toArray(), []) || [];
 
-  // Active branch: from persisted posStore, else staff's branch, else first branch
-  const activeBranch = allBranches.find(b => b.id === selectedBranchId)
-    ?? (dbUser?.branch_id ? allBranches.find(b => b.id === dbUser.branch_id) : null)
-    ?? allBranches[0];
+  // Active branch strictly from selectedBranchId
+  const activeBranch = allBranches.find(b => b.id === selectedBranchId) ?? null;
   const resolvedBranchId = activeBranch?.id ?? null;
 
-  // Auto-set selectedBranchId once branches load (if not yet set)
-  useEffect(() => {
-    if (!selectedBranchId && allBranches.length > 0) {
-      const staffBranch = dbUser?.branch_id ? allBranches.find(b => b.id === dbUser.branch_id) : null;
-      setSelectedBranchId((staffBranch ?? allBranches[0]).id);
-    }
-  }, [allBranches, selectedBranchId, dbUser?.branch_id]);
+  // Branch must be unlocked via BranchLoginModal. No auto-setting.
 
   // Stock for current branch only
   const getStock = (productId: string) => {
@@ -289,6 +282,7 @@ export default function POSPage() {
   return (
     <>
       {/* Global modals / drawers */}
+      <BranchLoginModal />
       <HeldOrdersDrawer />
       <RecentOrdersDrawer onStartReturn={(id) => { setShowReturn(true); }} />
       <CashRegisterModal />
@@ -360,6 +354,11 @@ export default function POSPage() {
         {/* Product Selection Area */}
         <div className="flex-1 flex flex-col bg-background rounded-xl overflow-hidden shadow-sm border border-border/40">
           <OnlineStatusBar />
+          {activeBranch && !activeBranch.is_active && (
+            <div className="bg-destructive/10 text-destructive px-4 py-2 text-sm font-bold flex justify-center items-center gap-2 shadow-sm border-b border-destructive/20 shrink-0">
+              <AlertCircle className="w-4 h-4" /> This branch is currently marked as INACTIVE. Sales may be restricted.
+            </div>
+          )}
           <LowStockAlertBar />
           <div className="p-4 bg-card/40 border-b border-border/40 shrink-0">
 
@@ -435,25 +434,6 @@ export default function POSPage() {
 
       {/* Cart Area */}
       <div className="w-[400px] xl:w-[450px] flex flex-col bg-card/80 border border-border/60 rounded-xl overflow-hidden shadow-2xl shrink-0">
-        {/* Branch Selector */}
-        {allBranches.length > 0 && (
-          <div className="px-3 py-2 bg-primary/5 border-b border-border/40 flex items-center gap-2">
-            <Building2 className="w-3.5 h-3.5 text-primary shrink-0" />
-            <span className="text-xs text-muted-foreground font-medium">Branch:</span>
-            <select
-              value={selectedBranchId ?? ""}
-              onChange={e => setSelectedBranchId(e.target.value)}
-              className="flex-1 text-xs font-bold bg-transparent border-none outline-none text-foreground cursor-pointer truncate"
-            >
-              {allBranches.map(b => (
-                <option key={b.id} value={b.id}>{b.name}{b.location ? ` — ${b.location}` : ""}</option>
-              ))}
-            </select>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${activeBranch?.is_active ? "bg-green-500/10 text-green-600" : "bg-muted text-muted-foreground"}`}>
-              {activeBranch?.is_active ? "OPEN" : "INACTIVE"}
-            </span>
-          </div>
-        )}
         <div className="p-3 bg-card border-b border-border/60 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <div className="bg-primary/10 p-1.5 rounded-lg">
