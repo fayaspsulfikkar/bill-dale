@@ -47,6 +47,7 @@ export default function InventoryPage() {
   const [editCell, setEditCell] = useState<{ productId: string; branchId: string } | null>(null);
   const [editVal, setEditVal] = useState("");
   const [pinForEdit, setPinForEdit] = useState<{ productId: string; branchId: string; stock: number } | null>(null);
+  const [pinForAddProduct, setPinForAddProduct] = useState(false);
 
   const { selectedBranchId } = usePOSStore();
 
@@ -118,6 +119,22 @@ export default function InventoryPage() {
     e.preventDefault();
     if (branches.length === 0) { alert("Add a branch first."); return; }
     if (form.variants.length === 0 || form.variants.some(v => !v.size.trim() || !v.sku.trim())) { alert("All variants need Size and SKU."); return; }
+
+    // Check if any variant has stock set for a branch other than the current terminal branch
+    const hasOtherBranchStock = selectedBranchId && form.variants.some(v =>
+      Object.entries(v.stockPerBranch).some(([bid, stockStr]) => bid !== selectedBranchId && (parseInt(stockStr) || 0) > 0)
+    );
+
+    if (hasOtherBranchStock) {
+      // Show Admin PIN dialog first, actual save happens on pin success
+      setPinForAddProduct(true);
+      return;
+    }
+
+    await doSubmit();
+  };
+
+  const doSubmit = async () => {
     setSubmitting(true);
     const ts = new Date().toISOString();
     const base = getBase(form.price, form.gst_percent, form.price_includes_gst);
@@ -389,6 +406,12 @@ export default function InventoryPage() {
         title="Admin Access Required"
         onSuccess={handlePinSuccessForEdit}
         onClose={() => setPinForEdit(null)}
+      />
+      <AdminPinDialog
+        open={pinForAddProduct}
+        title="Admin Access Required"
+        onSuccess={() => { setPinForAddProduct(false); doSubmit(); }}
+        onClose={() => setPinForAddProduct(false)}
       />
     </div>
   );
