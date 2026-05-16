@@ -15,8 +15,9 @@ export function BranchLoginModal() {
   const { selectedBranchId, setSelectedBranchId } = usePOSStore();
   const { businessId } = useAuthStore();
   const branches = useLiveQuery(() => db.branches.toArray(), []);
+  const business = useLiveQuery(() => businessId ? db.businesses.get(businessId) : undefined, [businessId]);
   
-  const [branchCode, setBranchCode] = useState("");
+  const [selectedBranch, setSelectedBranch] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -30,17 +31,16 @@ export function BranchLoginModal() {
     setIsLoading(true);
 
     try {
-      const codeUpper = branchCode.trim().toUpperCase();
-      const branch = branches?.find(b => b.branch_code?.toUpperCase() === codeUpper);
+      const branch = branches?.find(b => b.id === selectedBranch);
 
       if (!branch) {
-        setError("Invalid Branch Code.");
+        setError("Please select a branch.");
         setIsLoading(false);
         return;
       }
 
-      if (branch.password !== password) {
-        setError("Incorrect password for this branch.");
+      if (business?.admin_pin && password !== business.admin_pin) {
+        setError("Incorrect Admin PIN.");
         setIsLoading(false);
         return;
       }
@@ -77,27 +77,30 @@ export function BranchLoginModal() {
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Branch Code</Label>
-              <Input
+              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Select Branch</Label>
+              <select
                 required
-                value={branchCode}
-                onChange={e => setBranchCode(e.target.value)}
-                placeholder="e.g. BATH01"
-                className="h-12 bg-muted/50 border-border/50 text-center font-mono text-lg uppercase tracking-widest focus-visible:ring-primary"
-                autoFocus
-                autoComplete="off"
-              />
+                value={selectedBranch}
+                onChange={e => setSelectedBranch(e.target.value)}
+                className="w-full h-12 bg-muted/50 border-border/50 text-center text-lg font-bold rounded-md outline-none focus:ring-2 focus:ring-primary appearance-none px-4"
+              >
+                <option value="" disabled>-- Select a Branch --</option>
+                {branches?.map(b => (
+                  <option key={b.id} value={b.id}>{b.name} {b.location ? `(${b.location})` : ""}</option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Password</Label>
+              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Admin PIN</Label>
               <Input
                 required
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="••••"
                 className="h-12 bg-muted/50 border-border/50 text-center text-2xl tracking-[0.2em] focus-visible:ring-primary"
+                autoFocus
               />
             </div>
 
@@ -108,10 +111,10 @@ export function BranchLoginModal() {
               </div>
             )}
 
-            <Button type="submit" className="w-full h-12 font-bold text-lg" disabled={isLoading || !branchCode || !password}>
+            <Button type="submit" className="w-full h-12 font-bold text-lg" disabled={isLoading || !selectedBranch || !password}>
               {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
                 <>
-                  <Lock className="w-5 h-5 mr-2" /> Unlock Terminal
+                  <Lock className="w-5 h-5 mr-2" /> Lock to Branch
                 </>
               )}
             </Button>

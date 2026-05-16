@@ -28,11 +28,11 @@ interface NavItem {
 
 const ALL_NAV_ITEMS: NavItem[] = [
   { name: "POS Terminal",  href: "/dashboard/pos",       icon: ShoppingCart,    staffLocked: false },
-  { name: "Overview",      href: "/dashboard",            icon: LayoutDashboard, staffLocked: true  },
+  { name: "Overview",      href: "/dashboard",            icon: LayoutDashboard, staffLocked: false },
   { name: "Inventory",     href: "/dashboard/inventory",  icon: Package,         staffLocked: false },
   { name: "Staff & Users", href: "/dashboard/users",      icon: Users,           staffLocked: true  },
   { name: "Branches",      href: "/dashboard/branches",   icon: MapPin,          staffLocked: true  },
-  { name: "Analytics",     href: "/dashboard/analytics",  icon: BarChart3,       staffLocked: true  },
+  { name: "Analytics",     href: "/dashboard/analytics",  icon: BarChart3,       staffLocked: false },
   { name: "Activity Log",  href: "/dashboard/activity",   icon: Activity,        staffLocked: true  },
   { name: "Settings",      href: "/dashboard/settings",   icon: Settings,        staffLocked: true  },
 ];
@@ -177,17 +177,17 @@ export function DashboardSidebar() {
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="mx-3 mt-4 p-3 rounded-xl bg-primary/10 border border-primary/20 flex items-center gap-3 shadow-inner">
-              <div className="w-8 h-8 rounded-lg bg-background flex items-center justify-center shrink-0 shadow-sm border border-border/50">
-                <MapPin className="w-4 h-4 text-primary" />
+            <div className="mx-3 mt-4 p-3 rounded-xl bg-green-500/10 border border-green-500/30 flex items-center gap-3 shadow-[0_0_15px_rgba(34,197,94,0.1)]">
+              <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center shrink-0">
+                <MapPin className="w-4 h-4 text-green-500" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] uppercase font-bold text-primary tracking-wider">Active Branch</p>
-                <p className="text-sm font-bold truncate text-foreground">{activeBranch.name}</p>
+                <p className="text-[10px] uppercase font-black text-green-600 tracking-wider">Active Branch</p>
+                <p className="text-sm font-bold truncate text-green-50">{activeBranch.name}</p>
               </div>
               <button
                 onClick={() => setPinForUnlink(true)}
-                className="text-[10px] font-bold px-2 py-1 bg-background rounded border border-border/50 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-colors shadow-sm"
+                className="text-[10px] font-bold px-2 py-1 bg-green-500/20 text-green-600 rounded hover:bg-destructive hover:text-destructive-foreground hover:shadow-[0_0_10px_rgba(239,68,68,0.5)] transition-all"
                 title="Unlink Device from Branch (Requires Admin PIN)"
               >
                 UNLINK

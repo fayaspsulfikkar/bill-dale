@@ -15,11 +15,12 @@ import { MapPin, Plus } from "lucide-react";
 export default function BranchesPage() {
   const branches = useLiveQuery(() => db.branches.toArray());
   const [isOpen, setIsOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
+  
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
   const [contact, setContact] = useState("");
-  const [branchCode, setBranchCode] = useState("");
-  const [password, setPassword] = useState("");
 
   const handleAddBranch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,8 +30,6 @@ export default function BranchesPage() {
       location,
       contact,
       is_active: true,
-      branch_code: branchCode,
-      password: password,
     };
     await db.branches.add(newBranch);
     await db.sync_queue.add({
@@ -43,8 +42,41 @@ export default function BranchesPage() {
     setName("");
     setLocation("");
     setContact("");
-    setBranchCode("");
-    setPassword("");
+  };
+
+  const handleEditBranch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBranch) return;
+    
+    const updated = { ...editingBranch, name, location, contact };
+    await db.branches.put(updated);
+    await db.sync_queue.add({
+      table_name: 'branches',
+      operation: 'UPDATE',
+      data: updated,
+      timestamp: new Date().toISOString()
+    });
+    setIsEditOpen(false);
+    setEditingBranch(null);
+  };
+
+  const handleDeleteBranch = async (branchId: string) => {
+    if (!confirm("Are you sure you want to delete this branch?")) return;
+    await db.branches.delete(branchId);
+    await db.sync_queue.add({
+      table_name: 'branches',
+      operation: 'DELETE',
+      data: { id: branchId },
+      timestamp: new Date().toISOString()
+    });
+  };
+
+  const openEdit = (b: Branch) => {
+    setEditingBranch(b);
+    setName(b.name);
+    setLocation(b.location || "");
+    setContact(b.contact || "");
+    setIsEditOpen(true);
   };
 
   const toggleActive = async (branch: Branch) => {
@@ -86,17 +118,33 @@ export default function BranchesPage() {
                 <Label>Contact Number</Label>
                 <Input required value={contact} onChange={e => setContact(e.target.value)} placeholder="+1 (555) 000-0000" className="bg-background/50" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Branch Code / ID</Label>
-                  <Input required value={branchCode} onChange={e => setBranchCode(e.target.value)} placeholder="e.g. BATH01" className="bg-background/50 font-mono uppercase" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Device Password</Label>
-                  <Input required type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="bg-background/50" />
-                </div>
-              </div>
               <Button type="submit" className="w-full mt-2">Save Branch</Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isEditOpen} onOpenChange={open => {
+          setIsEditOpen(open);
+          if (!open) setEditingBranch(null);
+        }}>
+          <DialogContent className="bg-card border-border">
+            <DialogHeader>
+              <DialogTitle>Edit Branch</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleEditBranch} className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label>Branch Name</Label>
+                <Input required value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Downtown Sneaker Hub" className="bg-background/50" />
+              </div>
+              <div className="space-y-2">
+                <Label>Location / Address</Label>
+                <Input required value={location} onChange={e => setLocation(e.target.value)} placeholder="123 Main St..." className="bg-background/50" />
+              </div>
+              <div className="space-y-2">
+                <Label>Contact Number</Label>
+                <Input required value={contact} onChange={e => setContact(e.target.value)} placeholder="+1 (555) 000-0000" className="bg-background/50" />
+              </div>
+              <Button type="submit" className="w-full mt-2">Update Branch</Button>
             </form>
           </DialogContent>
         </Dialog>
@@ -135,9 +183,17 @@ export default function BranchesPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => toggleActive(branch)}>
-                        Toggle Status
-                      </Button>
+                      <div className="flex justify-end items-center gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => toggleActive(branch)}>
+                          Toggle Status
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => openEdit(branch)}>
+                          Edit
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleDeleteBranch(branch.id)}>
+                          Delete
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

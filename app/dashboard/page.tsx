@@ -1,17 +1,31 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import db from "@/offline/db";
+import { usePOSStore } from "@/store/posStore";
+import { BranchFilterChip } from "@/components/BranchFilterChip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { format, isToday, parseISO, getHours } from "date-fns";
 import { DollarSign, ShoppingBag, ReceiptText, MapPin } from "lucide-react";
 
 export default function DashboardOverview() {
-  const invoices = useLiveQuery(() => db.invoices.toArray()) || [];
+  const { selectedBranchId } = usePOSStore();
+  const [filterBranchId, setFilterBranchId] = useState<string | "all">(selectedBranchId || "all");
+
+  useEffect(() => {
+    if (selectedBranchId && filterBranchId === "all") {
+      setFilterBranchId(selectedBranchId);
+    }
+  }, [selectedBranchId]);
+
+  const allInvoices = useLiveQuery(() => db.invoices.toArray()) || [];
   const invoiceItems = useLiveQuery(() => db.invoice_items.toArray()) || [];
   const products = useLiveQuery(() => db.products.toArray()) || [];
   const branches = useLiveQuery(() => db.branches.toArray()) || [];
+
+  const invoices = filterBranchId === "all" ? allInvoices : allInvoices.filter(i => i.branch_id === filterBranchId);
 
   // Metrics Logic
   const todaysInvoices = invoices.filter(i => isToday(parseISO(i.created_at)));
@@ -59,9 +73,12 @@ export default function DashboardOverview() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-black tracking-tight uppercase">Overview</h1>
-        <p className="text-muted-foreground">Real-time metrics and offline analytics</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black tracking-tight uppercase">Overview</h1>
+          <p className="text-muted-foreground">Real-time metrics and offline analytics</p>
+        </div>
+        <BranchFilterChip value={filterBranchId} onChange={setFilterBranchId} />
       </div>
 
       {/* KPI Cards */}
