@@ -3,6 +3,8 @@ import { useState, useMemo, useEffect } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import db, { type Product, type Inventory, type Branch } from "@/offline/db";
 import { useAuthStore } from "@/store/authStore";
+import { usePOSStore } from "@/store/posStore";
+import { AdminPinDialog } from "@/components/AdminPinDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,6 +46,9 @@ export default function InventoryPage() {
   const [submitting, setSubmitting] = useState(false);
   const [editCell, setEditCell] = useState<{ productId: string; branchId: string } | null>(null);
   const [editVal, setEditVal] = useState("");
+  const [pinForEdit, setPinForEdit] = useState<{ productId: string; branchId: string; stock: number } | null>(null);
+
+  const { selectedBranchId } = usePOSStore();
 
   // Default chip to staff's branch
   useEffect(() => {
@@ -74,6 +79,24 @@ export default function InventoryPage() {
     if (branchFilter !== "all") p = [...p].sort((a, b) => getBranchStock(b.id, branchFilter) - getBranchStock(a.id, branchFilter));
     return p;
   }, [products, search, branchFilter, inventory]);
+
+  const handleEditClick = (productId: string, branchId: string, stock: number) => {
+    // If the branch being edited is NOT the currently locked terminal branch, require Admin PIN
+    if (selectedBranchId && branchId !== selectedBranchId) {
+      setPinForEdit({ productId, branchId, stock });
+    } else {
+      setEditCell({ productId, branchId });
+      setEditVal(String(stock));
+    }
+  };
+
+  const handlePinSuccessForEdit = () => {
+    if (pinForEdit) {
+      setEditCell({ productId: pinForEdit.productId, branchId: pinForEdit.branchId });
+      setEditVal(String(pinForEdit.stock));
+      setPinForEdit(null);
+    }
+  };
 
   const saveEdit = async () => {
     if (!editCell) return;
@@ -216,7 +239,7 @@ export default function InventoryPage() {
                           </div>
                         ) : (
                           <StockCell stock={stock} isSelected={branchFilter === b.id}
-                            onEdit={() => { setEditCell({ productId: p.id, branchId: b.id }); setEditVal(String(stock)); }} />
+                            onEdit={() => handleEditClick(p.id, b.id, stock)} />
                         )}
                       </TableCell>
                     );
@@ -361,6 +384,12 @@ export default function InventoryPage() {
           </form>
         </DialogContent>
       </Dialog>
+      <AdminPinDialog
+        open={!!pinForEdit}
+        title="Admin Access Required"
+        onSuccess={handlePinSuccessForEdit}
+        onClose={() => setPinForEdit(null)}
+      />
     </div>
   );
 }
