@@ -1,4 +1,3 @@
-import { formatINR } from "@/lib/formatCurrency";
 import type { Invoice, Branch, InvoiceItem, Product, ReturnOrder } from "@/offline/db";
 import { format } from "date-fns";
 import type { DateRange } from "@/components/dashboard/DateRangeFilter";
@@ -14,13 +13,22 @@ interface ExportData {
   branchLabel: string;
 }
 
+/** PDF-safe currency: jsPDF Helvetica doesn't have ₹ — use "Rs." prefix */
+function rs(n: number): string {
+  return `Rs. ${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+/** Same but no "Rs." for inside tables where header already says (Rs.) */
+function num(n: number): string {
+  return n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 // ─── CSV EXPORT ───────────────────────────────────────────────
 export function exportCSV(data: ExportData) {
   const { invoices, invoiceItems, products, branches, returnOrders, dateRange, businessName, branchLabel } = data;
   const invoiceIds = new Set(invoices.map(i => i.id));
   const filteredItems = invoiceItems.filter(ii => invoiceIds.has(ii.invoice_id));
 
-  // --- Sheet 1: Summary ---
   const totalRevenue = invoices.reduce((s, i) => s + i.total_amount, 0);
   const totalTax = invoices.reduce((s, i) => s + (i.tax_amount || 0), 0);
   const totalDiscount = invoices.reduce((s, i) => s + (i.discount || 0), 0)
@@ -29,27 +37,27 @@ export function exportCSV(data: ExportData) {
   const itemsSold = filteredItems.reduce((s, ii) => s + ii.quantity, 0);
   const avgOrder = invoices.length > 0 ? totalRevenue / invoices.length : 0;
 
-  const lines: string[] = [];
-  lines.push(`"${businessName} — Dashboard Report"`);
-  lines.push(`"Period","${dateRange.label}"`);
-  lines.push(`"Branch","${branchLabel}"`);
-  lines.push(`"Generated","${format(new Date(), "dd MMM yyyy, hh:mm a")}"`);
-  lines.push(``);
-  lines.push(`"SUMMARY"`);
-  lines.push(`"Metric","Value"`);
-  lines.push(`"Total Revenue","${totalRevenue.toFixed(2)}"`);
-  lines.push(`"Total Orders","${invoices.length}"`);
-  lines.push(`"Avg Order Value","${avgOrder.toFixed(2)}"`);
-  lines.push(`"Items Sold","${itemsSold}"`);
-  lines.push(`"Discounts Given","${totalDiscount.toFixed(2)}"`);
-  lines.push(`"Tax Collected","${totalTax.toFixed(2)}"`);
-  lines.push(`"Returns / Refunds","${totalReturns.toFixed(2)}"`);
-  lines.push(`"Net Sales","${(totalRevenue - totalDiscount - totalReturns).toFixed(2)}"`);
+  const L: string[] = [];
+  L.push(`"${businessName} - Dashboard Report"`);
+  L.push(`"Period","${dateRange.label}"`);
+  L.push(`"Branch","${branchLabel}"`);
+  L.push(`"Generated","${format(new Date(), "dd MMM yyyy, hh:mm a")}"`);
+  L.push(``);
+  L.push(`"SUMMARY"`);
+  L.push(`"Metric","Value"`);
+  L.push(`"Total Revenue","${totalRevenue.toFixed(2)}"`);
+  L.push(`"Total Orders","${invoices.length}"`);
+  L.push(`"Avg Order Value","${avgOrder.toFixed(2)}"`);
+  L.push(`"Items Sold","${itemsSold}"`);
+  L.push(`"Discounts Given","${totalDiscount.toFixed(2)}"`);
+  L.push(`"Tax Collected","${totalTax.toFixed(2)}"`);
+  L.push(`"Returns / Refunds","${totalReturns.toFixed(2)}"`);
+  L.push(`"Net Sales","${(totalRevenue - totalDiscount - totalReturns).toFixed(2)}"`);
 
-  // --- Payment breakdown ---
-  lines.push(``);
-  lines.push(`"PAYMENT BREAKDOWN"`);
-  lines.push(`"Method","Amount","Transactions"`);
+  // Payment breakdown
+  L.push(``);
+  L.push(`"PAYMENT BREAKDOWN"`);
+  L.push(`"Method","Amount","Transactions"`);
   const pmMap: Record<string, { amount: number; count: number }> = {};
   invoices.forEach(i => {
     const m = i.payment_method || "cash";
@@ -58,10 +66,10 @@ export function exportCSV(data: ExportData) {
     pmMap[m].count++;
   });
   Object.entries(pmMap).sort((a, b) => b[1].amount - a[1].amount).forEach(([m, d]) => {
-    lines.push(`"${m.toUpperCase()}","${d.amount.toFixed(2)}","${d.count}"`);
+    L.push(`"${m.toUpperCase()}","${d.amount.toFixed(2)}","${d.count}"`);
   });
 
-  // --- Staff performance ---
+  // Staff sales
   const staffMap: Record<string, { orders: number; revenue: number }> = {};
   invoices.forEach(i => {
     const name = i.staff_name || "Unassigned";
@@ -70,15 +78,15 @@ export function exportCSV(data: ExportData) {
     staffMap[name].revenue += i.total_amount;
   });
   if (Object.keys(staffMap).length > 0) {
-    lines.push(``);
-    lines.push(`"STAFF SALES"`);
-    lines.push(`"Staff","Orders","Revenue"`);
+    L.push(``);
+    L.push(`"STAFF SALES"`);
+    L.push(`"Staff","Orders","Revenue"`);
     Object.entries(staffMap).sort((a, b) => b[1].revenue - a[1].revenue).forEach(([name, d]) => {
-      lines.push(`"${name}","${d.orders}","${d.revenue.toFixed(2)}"`);
+      L.push(`"${name}","${d.orders}","${d.revenue.toFixed(2)}"`);
     });
   }
 
-  // --- Top products ---
+  // Top products
   const prodMap: Record<string, { units: number; revenue: number }> = {};
   filteredItems.forEach(ii => {
     if (!prodMap[ii.product_id]) prodMap[ii.product_id] = { units: 0, revenue: 0 };
@@ -93,26 +101,26 @@ export function exportCSV(data: ExportData) {
       return { name: prod?.name || "Unknown", sku: prod?.sku || "", ...d };
     });
   if (topProducts.length > 0) {
-    lines.push(``);
-    lines.push(`"TOP PRODUCTS"`);
-    lines.push(`"Product","SKU","Units Sold","Revenue"`);
+    L.push(``);
+    L.push(`"TOP PRODUCTS"`);
+    L.push(`"Product","SKU","Units Sold","Revenue"`);
     topProducts.forEach(p => {
-      lines.push(`"${p.name}","${p.sku}","${p.units}","${p.revenue.toFixed(2)}"`);
+      L.push(`"${p.name}","${p.sku}","${p.units}","${p.revenue.toFixed(2)}"`);
     });
   }
 
-  // --- Invoice detail ---
-  lines.push(``);
-  lines.push(`"INVOICE DETAIL"`);
-  lines.push(`"Invoice #","Date","Time","Staff","Customer","Amount","Tax","Discount","Payment","Branch"`);
+  // Invoice detail
+  L.push(``);
+  L.push(`"INVOICE DETAIL"`);
+  L.push(`"Invoice #","Date","Time","Staff","Customer","Amount","Tax","Discount","Payment","Branch"`);
   invoices.forEach(i => {
     const branch = branches.find(b => b.id === i.branch_id);
     const dt = new Date(i.created_at);
-    lines.push([
+    L.push([
       `"${i.invoice_number || i.id.slice(0, 8)}"`,
       `"${format(dt, "dd MMM yyyy")}"`,
       `"${format(dt, "hh:mm a")}"`,
-      `"${i.staff_name || "—"}"`,
+      `"${i.staff_name || "-"}"`,
       `"${i.customer_id || "Walk-in"}"`,
       `"${i.total_amount.toFixed(2)}"`,
       `"${(i.tax_amount || 0).toFixed(2)}"`,
@@ -122,8 +130,8 @@ export function exportCSV(data: ExportData) {
     ].join(","));
   });
 
-  const csv = lines.join("\n");
-  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" }); // BOM for Excel
+  const csv = L.join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -139,8 +147,11 @@ export async function exportPDF(data: ExportData) {
   const { default: autoTable } = await import("jspdf-autotable");
 
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const pageW = doc.internal.pageSize.getWidth();
-  const pageH = doc.internal.pageSize.getHeight();
+  const PW = doc.internal.pageSize.getWidth();
+  const PH = doc.internal.pageSize.getHeight();
+  const ML = 16; // margin left
+  const MR = PW - 16; // margin right
+  const CW = MR - ML; // content width
 
   const invoiceIds = new Set(invoices.map(i => i.id));
   const filteredItems = invoiceItems.filter(ii => invoiceIds.has(ii.invoice_id));
@@ -153,103 +164,148 @@ export async function exportPDF(data: ExportData) {
   const avgOrder = invoices.length > 0 ? totalRevenue / invoices.length : 0;
   const netSales = totalRevenue - totalDiscount - totalReturns;
 
-  // --- Colors ---
-  const PRIMARY: [number, number, number] = [79, 70, 229]; // indigo-600
+  // Colors
+  const PRIMARY: [number, number, number] = [79, 70, 229];
   const DARK: [number, number, number] = [30, 30, 46];
   const MUTED: [number, number, number] = [120, 120, 140];
   const WHITE: [number, number, number] = [255, 255, 255];
-  const LIGHT_BG: [number, number, number] = [245, 245, 250];
-  const GREEN: [number, number, number] = [34, 197, 94];
-  const RED: [number, number, number] = [239, 68, 68];
+  const LIGHT: [number, number, number] = [246, 246, 252];
+  const GREEN_C: [number, number, number] = [22, 163, 74];
+  const RED_C: [number, number, number] = [220, 38, 38];
 
-  // ─── Header Band ───
+  // Helper: section title with accent line
+  function sectionTitle(title: string, yPos: number): number {
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...DARK);
+    doc.text(title, ML, yPos);
+    doc.setDrawColor(...PRIMARY);
+    doc.setLineWidth(0.6);
+    doc.line(ML, yPos + 1.5, ML + 30, yPos + 1.5);
+    return yPos + 6;
+  }
+
+  // Helper: check page break
+  function checkPage(yPos: number, need: number): number {
+    if (yPos + need > PH - 20) {
+      doc.addPage();
+      return 18;
+    }
+    return yPos;
+  }
+
+  // ═══ HEADER BAND ═══
   doc.setFillColor(...PRIMARY);
-  doc.rect(0, 0, pageW, 36, "F");
+  doc.rect(0, 0, PW, 32, "F");
+  // Subtle gradient overlay
+  doc.setFillColor(0, 0, 0);
+  doc.setGState(new (doc as any).GState({ opacity: 0.1 }));
+  doc.rect(0, 24, PW, 8, "F");
+  doc.setGState(new (doc as any).GState({ opacity: 1 }));
 
   doc.setTextColor(...WHITE);
-  doc.setFontSize(20);
+  doc.setFontSize(18);
   doc.setFont("helvetica", "bold");
-  doc.text(businessName.toUpperCase(), 14, 16);
-
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text("Business Performance Report", 14, 24);
+  doc.text(businessName.toUpperCase(), ML, 14);
 
   doc.setFontSize(9);
-  doc.text(`Period: ${dateRange.label}  |  Branch: ${branchLabel}`, 14, 31);
+  doc.setFont("helvetica", "normal");
+  doc.text("BUSINESS PERFORMANCE REPORT", ML, 21);
 
+  // Right side metadata
   doc.setFontSize(8);
-  doc.text(`Generated: ${format(new Date(), "dd MMM yyyy, hh:mm a")}`, pageW - 14, 31, { align: "right" });
+  doc.text(dateRange.label, MR, 12, { align: "right" });
+  doc.text(`Branch: ${branchLabel}`, MR, 17, { align: "right" });
+  doc.text(format(new Date(), "dd MMM yyyy, hh:mm a"), MR, 22, { align: "right" });
 
-  // ─── KPI Summary Cards ───
-  let y = 44;
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...DARK);
-  doc.text("Key Metrics", 14, y);
-  y += 6;
+  // Thin accent line at bottom of header
+  doc.setFillColor(255, 255, 255);
+  doc.setGState(new (doc as any).GState({ opacity: 0.3 }));
+  doc.rect(0, 30, PW, 0.5, "F");
+  doc.setGState(new (doc as any).GState({ opacity: 1 }));
+
+  // ═══ KPI CARDS ═══
+  let y = 40;
+  y = sectionTitle("Key Metrics", y);
 
   const kpis = [
-    { label: "Total Revenue", value: formatINR(totalRevenue), color: PRIMARY },
-    { label: "Total Orders", value: invoices.length.toString(), color: DARK },
-    { label: "Avg Order", value: formatINR(avgOrder), color: DARK },
-    { label: "Items Sold", value: itemsSold.toLocaleString("en-IN"), color: DARK },
-    { label: "Tax Collected", value: formatINR(totalTax), color: MUTED },
-    { label: "Discounts", value: formatINR(totalDiscount), color: RED },
-    { label: "Returns", value: formatINR(totalReturns), color: RED },
-    { label: "Net Sales", value: formatINR(netSales), color: GREEN },
+    { label: "TOTAL REVENUE", value: rs(totalRevenue) },
+    { label: "TOTAL ORDERS", value: invoices.length.toLocaleString("en-IN") },
+    { label: "AVG ORDER VALUE", value: rs(avgOrder) },
+    { label: "ITEMS SOLD", value: itemsSold.toLocaleString("en-IN") },
+    { label: "TAX COLLECTED", value: rs(totalTax) },
+    { label: "DISCOUNTS", value: rs(totalDiscount) },
+    { label: "RETURNS", value: rs(totalReturns) },
+    { label: "NET SALES", value: rs(netSales) },
   ];
 
-  const cardW = (pageW - 28 - 21) / 4; // 4 columns, 14px margin each side, 7px gap
+  const gap = 4;
+  const cardW = (CW - gap * 3) / 4;
+  const cardH = 16;
+
   kpis.forEach((kpi, i) => {
     const col = i % 4;
     const row = Math.floor(i / 4);
-    const cx = 14 + col * (cardW + 7);
-    const cy = y + row * 20;
+    const cx = ML + col * (cardW + gap);
+    const cy = y + row * (cardH + gap);
 
-    doc.setFillColor(...LIGHT_BG);
-    doc.roundedRect(cx, cy, cardW, 17, 2, 2, "F");
+    // Card background
+    doc.setFillColor(...LIGHT);
+    doc.roundedRect(cx, cy, cardW, cardH, 1.5, 1.5, "F");
+    // Left accent bar
+    doc.setFillColor(...PRIMARY);
+    doc.rect(cx, cy + 2, 0.8, cardH - 4, "F");
 
-    doc.setFontSize(7);
+    // Label
+    doc.setFontSize(6);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...MUTED);
-    doc.text(kpi.label.toUpperCase(), cx + 4, cy + 6);
+    doc.text(kpi.label, cx + 4, cy + 5.5);
 
-    doc.setFontSize(11);
+    // Value
+    doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(...kpi.color);
-    doc.text(kpi.value, cx + 4, cy + 13);
+    doc.setTextColor(...DARK);
+    doc.text(kpi.value, cx + 4, cy + 12);
   });
-  y += 44;
+  y += (cardH + gap) * 2 + 6;
 
-  // ─── Revenue Summary ───
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...DARK);
-  doc.text("Revenue Breakdown", 14, y);
-  y += 2;
+  // ═══ REVENUE BREAKDOWN ═══
+  y = checkPage(y, 50);
+  y = sectionTitle("Revenue Breakdown", y);
 
   autoTable(doc, {
     startY: y,
-    head: [["", "Amount"]],
+    head: [["Description", "Amount (Rs.)"]],
     body: [
-      ["Gross Sales", formatINR(totalRevenue + totalDiscount)],
-      ["Discounts", `- ${formatINR(totalDiscount)}`],
-      ["Returns / Refunds", `- ${formatINR(totalReturns)}`],
-      ["Net Sales", formatINR(netSales)],
-      ["GST Collected", formatINR(totalTax)],
-      ["Total Paid", formatINR(totalRevenue)],
+      ["Gross Sales (Revenue + Discounts)", num(totalRevenue + totalDiscount)],
+      ["Less: Discounts", `- ${num(totalDiscount)}`],
+      ["Less: Returns / Refunds", `- ${num(totalReturns)}`],
+      ["Net Sales", num(netSales)],
+      ["GST Collected", num(totalTax)],
+      ["Total Amount Received", num(totalRevenue)],
     ],
     theme: "plain",
-    styles: { fontSize: 9, cellPadding: 3 },
-    headStyles: { fillColor: LIGHT_BG, textColor: MUTED, fontStyle: "bold", fontSize: 8 },
-    columnStyles: { 0: { fontStyle: "bold", cellWidth: 60 }, 1: { halign: "right" } },
-    alternateRowStyles: { fillColor: [250, 250, 254] },
-    margin: { left: 14, right: 14 },
+    styles: { fontSize: 8.5, cellPadding: { top: 3, bottom: 3, left: 5, right: 5 }, lineColor: [230, 230, 240], lineWidth: 0.3 },
+    headStyles: { fillColor: LIGHT, textColor: MUTED, fontStyle: "bold", fontSize: 7.5 },
+    bodyStyles: { textColor: DARK },
+    columnStyles: {
+      0: { fontStyle: "bold", cellWidth: CW * 0.6 },
+      1: { halign: "right", cellWidth: CW * 0.4, font: "courier" },
+    },
+    alternateRowStyles: { fillColor: [252, 252, 255] },
+    margin: { left: ML, right: PW - MR },
+    tableWidth: CW,
+    didParseCell: (data: any) => {
+      // Bold last two rows
+      if (data.section === "body" && data.row.index >= 3) {
+        data.cell.styles.fontStyle = "bold";
+      }
+    },
   });
-  y = (doc as any).lastAutoTable.finalY + 8;
+  y = (doc as any).lastAutoTable.finalY + 10;
 
-  // ─── Payment Breakdown ───
+  // ═══ PAYMENT METHODS ═══
   const pmMap: Record<string, { amount: number; count: number }> = {};
   invoices.forEach(i => {
     const m = i.payment_method || "cash";
@@ -260,32 +316,34 @@ export async function exportPDF(data: ExportData) {
   const pmRows = Object.entries(pmMap).sort((a, b) => b[1].amount - a[1].amount);
 
   if (pmRows.length > 0) {
-    if (y > pageH - 60) { doc.addPage(); y = 16; }
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...DARK);
-    doc.text("Payment Methods", 14, y);
-    y += 2;
+    y = checkPage(y, 40);
+    y = sectionTitle("Payment Methods", y);
 
     autoTable(doc, {
       startY: y,
-      head: [["Method", "Amount", "Transactions", "% of Revenue"]],
+      head: [["Method", "Amount (Rs.)", "Txns", "Share"]],
       body: pmRows.map(([m, d]) => [
         m.charAt(0).toUpperCase() + m.slice(1).replace("_", " "),
-        formatINR(d.amount),
+        num(d.amount),
         d.count.toString(),
         totalRevenue > 0 ? `${((d.amount / totalRevenue) * 100).toFixed(1)}%` : "0%",
       ]),
       theme: "grid",
-      styles: { fontSize: 8, cellPadding: 3 },
-      headStyles: { fillColor: PRIMARY, textColor: WHITE, fontStyle: "bold", fontSize: 8 },
-      columnStyles: { 1: { halign: "right" }, 2: { halign: "center" }, 3: { halign: "right" } },
-      margin: { left: 14, right: 14 },
+      styles: { fontSize: 8, cellPadding: 3, lineColor: [220, 220, 235], lineWidth: 0.3 },
+      headStyles: { fillColor: PRIMARY, textColor: WHITE, fontStyle: "bold", fontSize: 7.5 },
+      bodyStyles: { textColor: DARK },
+      columnStyles: {
+        1: { halign: "right", font: "courier" },
+        2: { halign: "center" },
+        3: { halign: "right" },
+      },
+      margin: { left: ML, right: PW - MR },
+      tableWidth: CW,
     });
-    y = (doc as any).lastAutoTable.finalY + 8;
+    y = (doc as any).lastAutoTable.finalY + 10;
   }
 
-  // ─── Staff Sales ───
+  // ═══ STAFF PERFORMANCE ═══
   const staffMap: Record<string, { orders: number; revenue: number; discounts: number }> = {};
   invoices.forEach(i => {
     const name = i.staff_name || "Unassigned";
@@ -297,34 +355,37 @@ export async function exportPDF(data: ExportData) {
   const staffRows = Object.entries(staffMap).sort((a, b) => b[1].revenue - a[1].revenue);
 
   if (staffRows.length > 0) {
-    if (y > pageH - 60) { doc.addPage(); y = 16; }
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...DARK);
-    doc.text("Staff Performance", 14, y);
-    y += 2;
+    y = checkPage(y, 40);
+    y = sectionTitle("Staff Performance", y);
 
     autoTable(doc, {
       startY: y,
-      head: [["#", "Staff", "Orders", "Revenue", "Discounts", "Avg Order"]],
+      head: [["#", "Staff Name", "Orders", "Revenue (Rs.)", "Discounts (Rs.)", "Avg Order (Rs.)"]],
       body: staffRows.map(([name, d], i) => [
         (i + 1).toString(),
         name,
         d.orders.toString(),
-        formatINR(d.revenue),
-        formatINR(d.discounts),
-        formatINR(d.orders > 0 ? d.revenue / d.orders : 0),
+        num(d.revenue),
+        num(d.discounts),
+        num(d.orders > 0 ? d.revenue / d.orders : 0),
       ]),
       theme: "grid",
-      styles: { fontSize: 8, cellPadding: 3 },
-      headStyles: { fillColor: PRIMARY, textColor: WHITE, fontStyle: "bold", fontSize: 8 },
-      columnStyles: { 0: { halign: "center", cellWidth: 10 }, 3: { halign: "right" }, 4: { halign: "right" }, 5: { halign: "right" } },
-      margin: { left: 14, right: 14 },
+      styles: { fontSize: 8, cellPadding: 3, lineColor: [220, 220, 235], lineWidth: 0.3 },
+      headStyles: { fillColor: PRIMARY, textColor: WHITE, fontStyle: "bold", fontSize: 7.5 },
+      bodyStyles: { textColor: DARK },
+      columnStyles: {
+        0: { halign: "center", cellWidth: 8 },
+        3: { halign: "right", font: "courier" },
+        4: { halign: "right", font: "courier" },
+        5: { halign: "right", font: "courier" },
+      },
+      margin: { left: ML, right: PW - MR },
+      tableWidth: CW,
     });
-    y = (doc as any).lastAutoTable.finalY + 8;
+    y = (doc as any).lastAutoTable.finalY + 10;
   }
 
-  // ─── Top Products ───
+  // ═══ TOP PRODUCTS ═══
   const prodMap: Record<string, { units: number; revenue: number }> = {};
   filteredItems.forEach(ii => {
     if (!prodMap[ii.product_id]) prodMap[ii.product_id] = { units: 0, revenue: 0 };
@@ -336,81 +397,89 @@ export async function exportPDF(data: ExportData) {
     .slice(0, 15)
     .map(([pid, d]) => {
       const prod = products.find(p => p.id === pid);
-      return { name: prod?.name || "Unknown", sku: prod?.sku || "—", ...d };
+      return { name: prod?.name || "Unknown", sku: prod?.sku || "-", ...d };
     });
 
   if (topProducts.length > 0) {
-    if (y > pageH - 60) { doc.addPage(); y = 16; }
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...DARK);
-    doc.text("Top Selling Products", 14, y);
-    y += 2;
+    y = checkPage(y, 40);
+    y = sectionTitle("Top Selling Products", y);
 
     autoTable(doc, {
       startY: y,
-      head: [["#", "Product", "SKU", "Units Sold", "Revenue"]],
+      head: [["#", "Product Name", "SKU", "Qty Sold", "Revenue (Rs.)"]],
       body: topProducts.map((p, i) => [
         (i + 1).toString(),
         p.name,
         p.sku,
         p.units.toString(),
-        formatINR(p.revenue),
+        num(p.revenue),
       ]),
       theme: "grid",
-      styles: { fontSize: 8, cellPadding: 3 },
-      headStyles: { fillColor: PRIMARY, textColor: WHITE, fontStyle: "bold", fontSize: 8 },
-      columnStyles: { 0: { halign: "center", cellWidth: 10 }, 3: { halign: "center" }, 4: { halign: "right" } },
-      margin: { left: 14, right: 14 },
+      styles: { fontSize: 8, cellPadding: 3, lineColor: [220, 220, 235], lineWidth: 0.3 },
+      headStyles: { fillColor: PRIMARY, textColor: WHITE, fontStyle: "bold", fontSize: 7.5 },
+      bodyStyles: { textColor: DARK },
+      columnStyles: {
+        0: { halign: "center", cellWidth: 8 },
+        3: { halign: "center" },
+        4: { halign: "right", font: "courier" },
+      },
+      margin: { left: ML, right: PW - MR },
+      tableWidth: CW,
     });
-    y = (doc as any).lastAutoTable.finalY + 8;
+    y = (doc as any).lastAutoTable.finalY + 10;
   }
 
-  // ─── Invoice Detail ───
+  // ═══ INVOICE DETAIL ═══
   if (invoices.length > 0) {
-    if (y > pageH - 50) { doc.addPage(); y = 16; }
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...DARK);
-    doc.text(`Invoice Detail (${Math.min(invoices.length, 100)} of ${invoices.length})`, 14, y);
-    y += 2;
+    y = checkPage(y, 40);
+    y = sectionTitle(`Invoice Detail (${Math.min(invoices.length, 100)} of ${invoices.length})`, y);
 
     autoTable(doc, {
       startY: y,
-      head: [["Invoice #", "Date", "Time", "Staff", "Amount", "Tax", "Discount", "Payment"]],
+      head: [["Invoice #", "Date", "Time", "Staff", "Amount (Rs.)", "Tax (Rs.)", "Discount (Rs.)", "Payment"]],
       body: invoices.slice(0, 100).map(i => {
         const dt = new Date(i.created_at);
         return [
           i.invoice_number || i.id.slice(0, 8),
           format(dt, "dd MMM yy"),
           format(dt, "hh:mm a"),
-          i.staff_name || "—",
-          formatINR(i.total_amount),
-          formatINR(i.tax_amount || 0),
-          formatINR(i.discount || 0),
+          i.staff_name || "-",
+          num(i.total_amount),
+          num(i.tax_amount || 0),
+          num(i.discount || 0),
           i.payment_method.toUpperCase(),
         ];
       }),
       theme: "striped",
-      styles: { fontSize: 7, cellPadding: 2 },
+      styles: { fontSize: 7, cellPadding: 2, lineColor: [230, 230, 240], lineWidth: 0.2 },
       headStyles: { fillColor: PRIMARY, textColor: WHITE, fontStyle: "bold", fontSize: 7 },
-      columnStyles: { 4: { halign: "right" }, 5: { halign: "right" }, 6: { halign: "right" } },
-      margin: { left: 14, right: 14 },
+      bodyStyles: { textColor: DARK },
+      columnStyles: {
+        4: { halign: "right", font: "courier" },
+        5: { halign: "right", font: "courier" },
+        6: { halign: "right", font: "courier" },
+      },
+      alternateRowStyles: { fillColor: [250, 250, 254] },
+      margin: { left: ML, right: PW - MR },
+      tableWidth: CW,
     });
   }
 
-  // ─── Footer on every page ───
+  // ═══ FOOTER ON EVERY PAGE ═══
   const totalPages = (doc as any).internal.getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p);
-    doc.setFontSize(7);
-    doc.setTextColor(...MUTED);
-    doc.text(`${businessName} — Confidential`, 14, pageH - 6);
-    doc.text(`Page ${p} of ${totalPages}`, pageW - 14, pageH - 6, { align: "right" });
+
     // Bottom accent line
     doc.setDrawColor(...PRIMARY);
-    doc.setLineWidth(0.5);
-    doc.line(14, pageH - 10, pageW - 14, pageH - 10);
+    doc.setLineWidth(0.4);
+    doc.line(ML, PH - 12, MR, PH - 12);
+
+    doc.setFontSize(6.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...MUTED);
+    doc.text(`${businessName}  |  Confidential  |  Generated ${format(new Date(), "dd MMM yyyy")}`, ML, PH - 7);
+    doc.text(`Page ${p} of ${totalPages}`, MR, PH - 7, { align: "right" });
   }
 
   doc.save(`${businessName.replace(/\s/g, "_")}_Report_${format(new Date(), "dd-MMM-yyyy")}.pdf`);
