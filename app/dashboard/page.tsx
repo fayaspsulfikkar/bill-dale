@@ -19,9 +19,9 @@ import { PaymentBreakdown } from "@/components/dashboard/PaymentBreakdown";
 import { HeldOrdersSummary } from "@/components/dashboard/HeldOrdersSummary";
 import { CashRegisterStatus } from "@/components/dashboard/CashRegisterStatus";
 import { DashboardInsights } from "@/components/dashboard/DashboardInsights";
-import { formatINR } from "@/lib/formatCurrency";
+import { exportPDF, exportCSV } from "@/lib/exportDashboard";
 import { parseISO, subDays, differenceInDays, startOfDay, endOfDay } from "date-fns";
-import { Download } from "lucide-react";
+import { Download, FileText, FileSpreadsheet, Loader2 } from "lucide-react";
 
 export default function DashboardOverview() {
   const { selectedBranchId } = usePOSStore();
@@ -99,54 +99,22 @@ export default function DashboardOverview() {
   const handleExport = async (type: "pdf" | "csv") => {
     setExporting(true);
     try {
+      const businessName = useAuthStore.getState().businessName || "BillDale";
+      const branchLabel = filterBranchId === "all" ? "All Branches" : branches.find(b => b.id === filterBranchId)?.name || "Unknown";
+      const exportData = {
+        invoices: invoicesInRange,
+        invoiceItems,
+        products,
+        branches,
+        returnOrders: returnsInRange,
+        dateRange,
+        businessName,
+        branchLabel,
+      };
       if (type === "csv") {
-        const headers = ["Invoice #", "Date", "Amount", "Tax", "Discount", "Payment", "Branch"];
-        const rows = invoicesInRange.map(i => {
-          const branch = branches.find(b => b.id === i.branch_id);
-          return [
-            i.invoice_number || i.id.slice(0, 8),
-            i.created_at,
-            i.total_amount.toFixed(2),
-            (i.tax_amount || 0).toFixed(2),
-            (i.discount || 0).toFixed(2),
-            i.payment_method,
-            branch?.name || "",
-          ].join(",");
-        });
-        const csv = [headers.join(","), ...rows].join("\n");
-        const blob = new Blob([csv], { type: "text/csv" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `dashboard-export-${dateRange.label.replace(/\s/g, "_")}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
-      } else if (type === "pdf") {
-        const { jsPDF } = await import("jspdf");
-        const { default: autoTable } = await import("jspdf-autotable");
-        const doc = new jsPDF();
-        doc.setFontSize(16);
-        doc.text("Dashboard Report", 14, 20);
-        doc.setFontSize(10);
-        doc.text(`Period: ${dateRange.label}`, 14, 28);
-        doc.text(`Total Revenue: ${formatINR(invoicesInRange.reduce((s, i) => s + i.total_amount, 0))}`, 14, 34);
-        doc.text(`Total Orders: ${invoicesInRange.length}`, 14, 40);
-
-        autoTable(doc, {
-          startY: 48,
-          head: [["Invoice #", "Date", "Amount", "Tax", "Discount", "Payment"]],
-          body: invoicesInRange.slice(0, 50).map(i => [
-            i.invoice_number || i.id.slice(0, 8),
-            new Date(i.created_at).toLocaleDateString("en-IN"),
-            `₹${i.total_amount.toFixed(2)}`,
-            `₹${(i.tax_amount || 0).toFixed(2)}`,
-            `₹${(i.discount || 0).toFixed(2)}`,
-            i.payment_method.toUpperCase(),
-          ]),
-          styles: { fontSize: 8 },
-          headStyles: { fillColor: [99, 102, 241] },
-        });
-        doc.save(`dashboard-report-${dateRange.label.replace(/\s/g, "_")}.pdf`);
+        exportCSV(exportData);
+      } else {
+        await exportPDF(exportData);
       }
     } catch (err) {
       console.error("Export failed:", err);
@@ -169,14 +137,32 @@ export default function DashboardOverview() {
           <div className="relative group">
             <button
               disabled={exporting}
-              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full border border-border/50 bg-card/50 hover:bg-card/80 transition-all text-sm font-semibold text-muted-foreground hover:text-foreground disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full border border-border/50 bg-card/50 hover:bg-card/80 transition-all text-sm font-semibold text-muted-foreground hover:text-foreground disabled:opacity-50"
             >
-              <Download className="w-4 h-4" />
+              {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               {exporting ? "Exporting…" : "Export"}
             </button>
-            <div className="absolute right-0 top-full mt-1 z-50 hidden group-hover:block w-28 rounded-xl border border-border/60 bg-card shadow-xl p-1">
-              <button onClick={() => handleExport("csv")} className="w-full text-left px-3 py-1.5 rounded-lg text-sm hover:bg-muted/50">CSV</button>
-              <button onClick={() => handleExport("pdf")} className="w-full text-left px-3 py-1.5 rounded-lg text-sm hover:bg-muted/50">PDF</button>
+            <div className="absolute right-0 top-full mt-1 z-50 hidden group-hover:block w-48 rounded-xl border border-border/60 bg-card shadow-xl p-1.5 space-y-0.5">
+              <button
+                onClick={() => handleExport("pdf")}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-muted/50 transition-colors"
+              >
+                <FileText className="w-4 h-4 text-red-400" />
+                <div className="text-left">
+                  <p className="font-semibold">PDF Report</p>
+                  <p className="text-[10px] text-muted-foreground">Branded, multi-section</p>
+                </div>
+              </button>
+              <button
+                onClick={() => handleExport("csv")}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-muted/50 transition-colors"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-green-400" />
+                <div className="text-left">
+                  <p className="font-semibold">CSV Spreadsheet</p>
+                  <p className="text-[10px] text-muted-foreground">Excel-compatible data</p>
+                </div>
+              </button>
             </div>
           </div>
 
