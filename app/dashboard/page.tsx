@@ -1,18 +1,33 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import db from "@/offline/db";
 import { usePOSStore } from "@/store/posStore";
+import { useAuthStore } from "@/store/authStore";
 import { BranchFilterChip } from "@/components/BranchFilterChip";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
-import { format, isToday, parseISO, getHours } from "date-fns";
-import { DollarSign, ShoppingBag, ReceiptText, MapPin } from "lucide-react";
+import { DateRangeFilter, getDateRange, type DateRange } from "@/components/dashboard/DateRangeFilter";
+import { MetricCards } from "@/components/dashboard/MetricCards";
+import { RevenueSummary } from "@/components/dashboard/RevenueSummary";
+import { SalesTrendChart } from "@/components/dashboard/SalesTrendChart";
+import { PeakHoursChart } from "@/components/dashboard/PeakHoursChart";
+import { BranchComparison } from "@/components/dashboard/BranchComparison";
+import { TopSellingProducts } from "@/components/dashboard/TopSellingProducts";
+import { LowStockAlerts } from "@/components/dashboard/LowStockAlerts";
+import { PaymentBreakdown } from "@/components/dashboard/PaymentBreakdown";
+import { HeldOrdersSummary } from "@/components/dashboard/HeldOrdersSummary";
+import { CashRegisterStatus } from "@/components/dashboard/CashRegisterStatus";
+import { DashboardInsights } from "@/components/dashboard/DashboardInsights";
+import { formatINR } from "@/lib/formatCurrency";
+import { parseISO, subDays, differenceInDays, startOfDay, endOfDay } from "date-fns";
+import { Download } from "lucide-react";
 
 export default function DashboardOverview() {
   const { selectedBranchId } = usePOSStore();
+  const { businessId, role, staffMode } = useAuthStore();
   const [filterBranchId, setFilterBranchId] = useState<string | "all">(selectedBranchId || "all");
+  const [dateRange, setDateRange] = useState<DateRange>(getDateRange("today"));
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     if (selectedBranchId && filterBranchId === "all") {
@@ -20,191 +35,204 @@ export default function DashboardOverview() {
     }
   }, [selectedBranchId]);
 
+  // Data queries
   const allInvoices = useLiveQuery(() => db.invoices.toArray()) || [];
   const invoiceItems = useLiveQuery(() => db.invoice_items.toArray()) || [];
   const products = useLiveQuery(() => db.products.toArray()) || [];
   const branches = useLiveQuery(() => db.branches.toArray()) || [];
+  const inventory = useLiveQuery(() => db.inventory.toArray()) || [];
+  const heldOrders = useLiveQuery(() => db.held_orders.toArray()) || [];
+  const cashRegisters = useLiveQuery(() => db.cash_registers.toArray()) || [];
+  const returnOrders = useLiveQuery(() => db.return_orders.toArray()) || [];
 
-  const invoices = filterBranchId === "all" ? allInvoices : allInvoices.filter(i => i.branch_id === filterBranchId);
+  // Filter invoices by branch
+  const branchInvoices = useMemo(() => {
+    if (filterBranchId === "all") return allInvoices;
+    return allInvoices.filter(i => i.branch_id === filterBranchId);
+  }, [allInvoices, filterBranchId]);
 
-  // Metrics Logic
-  const todaysInvoices = invoices.filter(i => isToday(parseISO(i.created_at)));
-  const todaysSales = todaysInvoices.reduce((sum, inv) => sum + inv.total_amount, 0);
-  const totalSales = invoices.reduce((sum, inv) => sum + inv.total_amount, 0);
-  const totalOrders = invoices.length;
-
-  // Branch Comparison (Sales Volume per branch)
-  const branchData = branches.map(b => {
-    const branchInvoices = invoices.filter(i => i.branch_id === b.id);
-    return {
-      name: b.name,
-      sales: branchInvoices.reduce((sum, inv) => sum + inv.total_amount, 0)
-    };
-  });
-
-  // Peak Hours Data (Count of orders per hour)
-  const hoursMap = new Array(24).fill(0);
-  invoices.forEach(inv => {
-    const hour = getHours(parseISO(inv.created_at));
-    hoursMap[hour]++;
-  });
-  const peakHoursData = hoursMap.map((count, hour) => ({
-    time: `${hour}:00`,
-    orders: count
-  })).filter(d => d.orders > 0);
-
-  // Top Selling Items
-  const productSalesCount: Record<string, number> = {};
-  invoiceItems.forEach(item => {
-    productSalesCount[item.product_id] = (productSalesCount[item.product_id] || 0) + item.quantity;
-  });
-
-  const topSelling = Object.entries(productSalesCount)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([productId, count]) => {
-      const prod = products.find(p => p.id === productId);
-      return {
-        name: prod?.name || 'Unknown',
-        sales: count,
-        sku: prod?.sku || '---'
-      };
+  // Filter by date range
+  const invoicesInRange = useMemo(() => {
+    return branchInvoices.filter(i => {
+      const d = parseISO(i.created_at);
+      return d >= dateRange.from && d <= dateRange.to;
     });
+  }, [branchInvoices, dateRange]);
+
+  // Previous period for comparison
+  const prevInvoices = useMemo(() => {
+    const rangeDays = differenceInDays(dateRange.to, dateRange.from) + 1;
+    const prevFrom = startOfDay(subDays(dateRange.from, rangeDays));
+    const prevTo = endOfDay(subDays(dateRange.from, 1));
+    return branchInvoices.filter(i => {
+      const d = parseISO(i.created_at);
+      return d >= prevFrom && d <= prevTo;
+    });
+  }, [branchInvoices, dateRange]);
+
+  // Filter returns by date range and branch
+  const returnsInRange = useMemo(() => {
+    return returnOrders.filter(r => {
+      const d = parseISO(r.created_at);
+      const inRange = d >= dateRange.from && d <= dateRange.to;
+      const inBranch = filterBranchId === "all" || r.branch_id === filterBranchId;
+      return inRange && inBranch;
+    });
+  }, [returnOrders, dateRange, filterBranchId]);
+
+  // Filter held orders by branch
+  const filteredHeldOrders = useMemo(() => {
+    if (filterBranchId === "all") return heldOrders;
+    return heldOrders.filter(o => o.branch_id === filterBranchId);
+  }, [heldOrders, filterBranchId]);
+
+  // Active cash register
+  const activeCashRegister = useMemo(() => {
+    const today = new Date().toISOString().split("T")[0];
+    const branchId = filterBranchId === "all" ? selectedBranchId : filterBranchId;
+    if (!branchId) return null;
+    return cashRegisters.find(r => r.branch_id === branchId && r.date === today) || null;
+  }, [cashRegisters, filterBranchId, selectedBranchId]);
+
+  // Export handler
+  const handleExport = async (type: "pdf" | "csv") => {
+    setExporting(true);
+    try {
+      if (type === "csv") {
+        const headers = ["Invoice #", "Date", "Amount", "Tax", "Discount", "Payment", "Branch"];
+        const rows = invoicesInRange.map(i => {
+          const branch = branches.find(b => b.id === i.branch_id);
+          return [
+            i.invoice_number || i.id.slice(0, 8),
+            i.created_at,
+            i.total_amount.toFixed(2),
+            (i.tax_amount || 0).toFixed(2),
+            (i.discount || 0).toFixed(2),
+            i.payment_method,
+            branch?.name || "",
+          ].join(",");
+        });
+        const csv = [headers.join(","), ...rows].join("\n");
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `dashboard-export-${dateRange.label.replace(/\s/g, "_")}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else if (type === "pdf") {
+        const { jsPDF } = await import("jspdf");
+        const { default: autoTable } = await import("jspdf-autotable");
+        const doc = new jsPDF();
+        doc.setFontSize(16);
+        doc.text("Dashboard Report", 14, 20);
+        doc.setFontSize(10);
+        doc.text(`Period: ${dateRange.label}`, 14, 28);
+        doc.text(`Total Revenue: ${formatINR(invoicesInRange.reduce((s, i) => s + i.total_amount, 0))}`, 14, 34);
+        doc.text(`Total Orders: ${invoicesInRange.length}`, 14, 40);
+
+        autoTable(doc, {
+          startY: 48,
+          head: [["Invoice #", "Date", "Amount", "Tax", "Discount", "Payment"]],
+          body: invoicesInRange.slice(0, 50).map(i => [
+            i.invoice_number || i.id.slice(0, 8),
+            new Date(i.created_at).toLocaleDateString("en-IN"),
+            `₹${i.total_amount.toFixed(2)}`,
+            `₹${(i.tax_amount || 0).toFixed(2)}`,
+            `₹${(i.discount || 0).toFixed(2)}`,
+            i.payment_method.toUpperCase(),
+          ]),
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [99, 102, 241] },
+        });
+        doc.save(`dashboard-report-${dateRange.label.replace(/\s/g, "_")}.pdf`);
+      }
+    } catch (err) {
+      console.error("Export failed:", err);
+      alert("Export failed. Check console.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-5">
+      {/* Header + Filters */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black tracking-tight uppercase">Overview</h1>
-          <p className="text-muted-foreground">Real-time metrics and offline analytics</p>
+          <h1 className="text-2xl font-black tracking-tight">Overview</h1>
+          <p className="text-sm text-muted-foreground">Business performance dashboard</p>
         </div>
-        <BranchFilterChip value={filterBranchId} onChange={setFilterBranchId} />
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Export */}
+          <div className="relative group">
+            <button
+              disabled={exporting}
+              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full border border-border/50 bg-card/50 hover:bg-card/80 transition-all text-sm font-semibold text-muted-foreground hover:text-foreground disabled:opacity-50"
+            >
+              <Download className="w-4 h-4" />
+              {exporting ? "Exporting…" : "Export"}
+            </button>
+            <div className="absolute right-0 top-full mt-1 z-50 hidden group-hover:block w-28 rounded-xl border border-border/60 bg-card shadow-xl p-1">
+              <button onClick={() => handleExport("csv")} className="w-full text-left px-3 py-1.5 rounded-lg text-sm hover:bg-muted/50">CSV</button>
+              <button onClick={() => handleExport("pdf")} className="w-full text-left px-3 py-1.5 rounded-lg text-sm hover:bg-muted/50">PDF</button>
+            </div>
+          </div>
+
+          <DateRangeFilter value={dateRange} onChange={setDateRange} />
+          <BranchFilterChip value={filterBranchId} onChange={setFilterBranchId} />
+        </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-card/50 border-primary/20 shadow-[inset_0_0_10px_rgba(var(--primary),0.05)]">
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 bg-primary/20 rounded-lg">
-              <DollarSign className="w-6 h-6 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Today's Revenue</p>
-              <h2 className="text-3xl font-black font-mono text-primary">${todaysSales.toFixed(2)}</h2>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Metric Cards */}
+      <MetricCards
+        invoices={invoicesInRange}
+        prevInvoices={prevInvoices}
+        invoiceItems={invoiceItems}
+        products={products}
+        inventory={inventory}
+        heldOrders={filteredHeldOrders}
+        branchId={filterBranchId}
+      />
 
-        <Card className="bg-card/50 border-border/50">
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 bg-secondary rounded-lg">
-              <ReceiptText className="w-6 h-6 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Total Revenue</p>
-              <h2 className="text-3xl font-black font-mono">${totalSales.toFixed(2)}</h2>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Sales Trend (full width) */}
+      <SalesTrendChart invoices={invoicesInRange} dateRange={dateRange} />
 
-        <Card className="bg-card/50 border-border/50">
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 bg-secondary rounded-lg">
-              <ShoppingBag className="w-6 h-6 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Total Orders</p>
-              <h2 className="text-3xl font-black font-mono">{totalOrders}</h2>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card/50 border-border/50">
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 bg-secondary rounded-lg">
-              <MapPin className="w-6 h-6 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Active Branches</p>
-              <h2 className="text-3xl font-black font-mono">{branches.filter(b => b.is_active).length}</h2>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Revenue Summary + Payment Breakdown */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <RevenueSummary invoices={invoicesInRange} invoiceItems={invoiceItems} returnOrders={returnsInRange} />
+        <PaymentBreakdown invoices={invoicesInRange} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Branch Comparisons */}
-        <Card className="bg-card/50 border-border/50">
-          <CardHeader>
-            <CardTitle>Branch Revenue Comparison</CardTitle>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            {branchData.length > 0 && branchData.some(b => b.sales > 0) ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={branchData}>
-                  <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val}`} />
-                  <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{ backgroundColor: 'oklch(0.15 0 0)', border: '1px solid oklch(1 0 0 / 10%)' }} />
-                  <Bar dataKey="sales" fill="oklch(0.65 0.25 250)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">Not enough data to display</div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Charts: Branch Comparison + Peak Hours */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <BranchComparison invoices={invoicesInRange} branches={branches} />
+        <PeakHoursChart invoices={invoicesInRange} />
+      </div>
 
-        {/* Peak Hours */}
-        <Card className="bg-card/50 border-border/50">
-          <CardHeader>
-            <CardTitle>Peak Sales Hours (Order Frequency)</CardTitle>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            {peakHoursData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={peakHoursData}>
-                  <XAxis dataKey="time" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: 'oklch(0.15 0 0)', border: '1px solid oklch(1 0 0 / 10%)' }} />
-                  <Line type="monotone" dataKey="orders" stroke="oklch(0.65 0.25 250)" strokeWidth={3} dot={{ fill: 'oklch(0.65 0.25 250)' }} />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">Not enough data to display</div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Top Selling Products (full width) */}
+      <TopSellingProducts
+        invoices={invoicesInRange}
+        invoiceItems={invoiceItems}
+        products={products}
+        inventory={inventory}
+        branchId={filterBranchId}
+      />
 
-        {/* Top Selling Products */}
-        <Card className="bg-card/50 border-border/50 lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Top Selling Inventory</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {topSelling.length > 0 ? (
-              <div className="space-y-4">
-                {topSelling.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-4 bg-background/50 rounded-lg border border-border/30">
-                    <div className="flex items-center gap-4">
-                      <div className="w-8 h-8 flex items-center justify-center bg-primary/20 text-primary font-black rounded-md">
-                        {idx + 1}
-                      </div>
-                      <div>
-                        <p className="font-bold">{item.name}</p>
-                        <p className="text-xs text-muted-foreground font-mono">{item.sku}</p>
-                      </div>
-                    </div>
-                    <div className="font-bold text-lg">
-                      {item.sales} <span className="text-xs text-muted-foreground font-normal">Units</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground text-sm">No sales data available yet</div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Bottom row: Low Stock + Held Orders + Cash Register + Insights */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <LowStockAlerts products={products} inventory={inventory} branches={branches} branchId={filterBranchId} />
+        <HeldOrdersSummary heldOrders={filteredHeldOrders} />
+        <CashRegisterStatus register={activeCashRegister} />
+        <DashboardInsights
+          invoices={invoicesInRange}
+          invoiceItems={invoiceItems}
+          products={products}
+          inventory={inventory}
+          branches={branches}
+          returnOrders={returnsInRange}
+          branchId={filterBranchId}
+        />
       </div>
     </div>
   );
