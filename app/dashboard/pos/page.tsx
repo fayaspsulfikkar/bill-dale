@@ -45,6 +45,7 @@ export default function POSPage() {
   const [editingItem, setEditingItem] = useState<{ productId: string; discount: number; price: number | '' } | null>(null);
   const [activeCategory, setActiveCategory] = useState("All");
   const [showReturn, setShowReturn] = useState(false);
+  const [staffName, setStaffName] = useState("");
 
   const [completedTransaction, setCompletedTransaction] = useState<{
     invoice: Invoice;
@@ -219,6 +220,7 @@ export default function POSPage() {
         discount,
         payment_method: paymentMethod,
         notes: orderNotes || undefined,
+        staff_name: staffName || user?.name || user?.email || undefined,
         status: "completed",
         created_at: timestamp,
       };
@@ -548,6 +550,17 @@ export default function POSPage() {
               <div className="p-6 flex-1 overflow-y-auto space-y-6 flex flex-col">
                 {/* Customer Section */}
                 <CheckoutCustomerPanel />
+
+                {/* Staff Name */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Billed By</Label>
+                  <Input
+                    value={staffName}
+                    onChange={e => setStaffName(e.target.value)}
+                    placeholder={user?.name || user?.email || "Staff name"}
+                    className="h-9 bg-background border-border/50 text-sm"
+                  />
+                </div>
 
                 <div className="flex-1" /> {/* Spacer */}
 

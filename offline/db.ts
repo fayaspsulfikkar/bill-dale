@@ -136,6 +136,7 @@ export interface Invoice {
   payment_method: 'cash' | 'card' | 'upi' | 'split' | 'store_credit' | 'credit_sale';
   payment_details?: Record<string, unknown>; // stores split breakdown, reference IDs etc
   notes?: string;
+  staff_name?: string;
   status: 'completed' | 'refunded' | 'partial_refund';
   created_at: string;
   synced?: boolean;
