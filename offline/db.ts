@@ -250,6 +250,7 @@ export interface StaffMember {
   phone?: string;
   role_title: string;
   is_active: boolean;
+  branch_ids?: string[];
   created_at: string;
 }
 
