@@ -13,6 +13,7 @@ import { SalesTrendChart } from "@/components/dashboard/SalesTrendChart";
 import { PeakHoursChart } from "@/components/dashboard/PeakHoursChart";
 import { BranchComparison } from "@/components/dashboard/BranchComparison";
 import { TopSellingProducts } from "@/components/dashboard/TopSellingProducts";
+import { StaffPerformance } from "@/components/dashboard/StaffPerformance";
 import { LowStockAlerts } from "@/components/dashboard/LowStockAlerts";
 import { PaymentBreakdown } from "@/components/dashboard/PaymentBreakdown";
 import { HeldOrdersSummary } from "@/components/dashboard/HeldOrdersSummary";
@@ -218,6 +219,9 @@ export default function DashboardOverview() {
         inventory={inventory}
         branchId={filterBranchId}
       />
+
+      {/* Staff Sales Tracking */}
+      <StaffPerformance invoices={invoicesInRange} />
 
       {/* Bottom row: Low Stock + Held Orders + Cash Register + Insights */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
