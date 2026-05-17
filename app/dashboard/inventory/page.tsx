@@ -48,6 +48,7 @@ export default function InventoryPage() {
   const [editVal, setEditVal] = useState("");
   const [pinForEdit, setPinForEdit] = useState<{ productId: string; branchId: string; stock: number } | null>(null);
   const [pinForAddProduct, setPinForAddProduct] = useState(false);
+  const [pinForDelete, setPinForDelete] = useState<string | null>(null);
 
   const { selectedBranchId } = usePOSStore();
 
@@ -156,10 +157,16 @@ export default function InventoryPage() {
     finally { setSubmitting(false); }
   };
 
-  const deleteProduct = async (pid: string) => {
-    if (!confirm("Delete this product?")) return;
-    await db.inventory.where("product_id").equals(pid).delete();
-    await db.products.delete(pid);
+  const deleteProduct = (pid: string) => {
+    // Gate all deletions behind Admin PIN
+    setPinForDelete(pid);
+  };
+
+  const doDeleteProduct = async () => {
+    if (!pinForDelete) return;
+    await db.inventory.where("product_id").equals(pinForDelete).delete();
+    await db.products.delete(pinForDelete);
+    setPinForDelete(null);
   };
 
   return (
@@ -412,6 +419,12 @@ export default function InventoryPage() {
         title="Admin Access Required"
         onSuccess={() => { setPinForAddProduct(false); doSubmit(); }}
         onClose={() => setPinForAddProduct(false)}
+      />
+      <AdminPinDialog
+        open={!!pinForDelete}
+        title="Confirm Product Deletion"
+        onSuccess={doDeleteProduct}
+        onClose={() => setPinForDelete(null)}
       />
     </div>
   );
