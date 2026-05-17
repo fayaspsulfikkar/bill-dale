@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
+import { useState } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
+import db, { type StaffMember } from "@/offline/db";
 import { useAuthStore } from "@/store/authStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,42 +10,23 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, Plus, UserCheck, Phone, Pencil, Trash2, RefreshCw, Crown, ToggleLeft, ToggleRight } from "lucide-react";
+import { Users, Plus, UserCheck, Phone, Pencil, Trash2, Crown, ToggleLeft, ToggleRight } from "lucide-react";
 import { motion } from "framer-motion";
-
-interface StaffMember {
-  id: string;
-  name: string;
-  phone: string | null;
-  role_title: string;
-  is_active: boolean;
-  created_at: string;
-}
 
 const EMPTY_FORM = { name: "", phone: "", role_title: "Sales Staff" };
 
 export default function UsersPage() {
   const { businessId, user: currentUser } = useAuthStore();
-  const [staff, setStaff] = useState<StaffMember[]>([]);
-  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
 
-  const fetchStaff = useCallback(async () => {
-    if (!supabase || !businessId) { setLoading(false); return; }
-    setLoading(true);
-    const { data } = await supabase
-      .from("staff_members")
-      .select("*")
-      .eq("business_id", businessId)
-      .order("created_at");
-    setStaff((data as StaffMember[]) ?? []);
-    setLoading(false);
-  }, [businessId]);
-
-  useEffect(() => { fetchStaff(); }, [fetchStaff]);
+  // Live query from Dexie — always up to date, works offline
+  const staff = useLiveQuery(
+    () => businessId ? db.staff_members.where("business_id").equals(businessId).toArray() : [],
+    [businessId]
+  ) || [];
 
   const openAdd = () => { setEditingId(null); setForm(EMPTY_FORM); setDialogOpen(true); };
   const openEdit = (m: StaffMember) => {
@@ -55,18 +37,26 @@ export default function UsersPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!supabase || !businessId) return;
+    if (!businessId) return;
     setSaving(true);
     try {
       if (editingId) {
-        await supabase.from("staff_members").update(form).eq("id", editingId);
-        setStaff((prev) => prev.map((m) => m.id === editingId ? { ...m, ...form } : m));
+        await db.staff_members.update(editingId, {
+          name: form.name,
+          phone: form.phone || undefined,
+          role_title: form.role_title,
+        });
       } else {
-        const { data } = await supabase.from("staff_members")
-          .insert({ ...form, business_id: businessId })
-          .select()
-          .single();
-        if (data) setStaff((prev) => [...prev, data as StaffMember]);
+        const newMember: StaffMember = {
+          id: crypto.randomUUID(),
+          business_id: businessId,
+          name: form.name,
+          phone: form.phone || undefined,
+          role_title: form.role_title || "Sales Staff",
+          is_active: true,
+          created_at: new Date().toISOString(),
+        };
+        await db.staff_members.add(newMember);
       }
       setDialogOpen(false);
     } finally {
@@ -75,15 +65,12 @@ export default function UsersPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!supabase || !confirm("Remove this staff member?")) return;
-    await supabase.from("staff_members").delete().eq("id", id);
-    setStaff((prev) => prev.filter((m) => m.id !== id));
+    if (!confirm("Remove this staff member?")) return;
+    await db.staff_members.delete(id);
   };
 
   const toggleActive = async (m: StaffMember) => {
-    if (!supabase) return;
-    await supabase.from("staff_members").update({ is_active: !m.is_active }).eq("id", m.id);
-    setStaff((prev) => prev.map((s) => s.id === m.id ? { ...s, is_active: !s.is_active } : s));
+    await db.staff_members.update(m.id, { is_active: !m.is_active });
   };
 
   return (
@@ -93,14 +80,9 @@ export default function UsersPage() {
           <h1 className="text-3xl font-bold tracking-tight">Staff & Users</h1>
           <p className="text-muted-foreground">Manage staff records for billing attribution and sales tracking.</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={fetchStaff} disabled={loading} className="gap-2">
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          </Button>
-          <Button onClick={openAdd} className="gap-2">
-            <Plus className="w-4 h-4" /> Add Staff
-          </Button>
-        </div>
+        <Button onClick={openAdd} className="gap-2">
+          <Plus className="w-4 h-4" /> Add Staff
+        </Button>
       </div>
 
       {/* Owner / Admin card */}
@@ -151,11 +133,7 @@ export default function UsersPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-12 text-muted-foreground gap-3">
-              <RefreshCw className="w-4 h-4 animate-spin" /> Loading…
-            </div>
-          ) : staff.length === 0 ? (
+          {staff.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground flex flex-col items-center gap-3">
               <Users className="w-12 h-12 opacity-20" />
               <p>No staff added yet.</p>

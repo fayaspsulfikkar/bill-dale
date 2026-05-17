@@ -243,6 +243,16 @@ export interface Refund {
   synced?: boolean;
 }
 
+export interface StaffMember {
+  id: string;
+  business_id: string;
+  name: string;
+  phone?: string;
+  role_title: string;
+  is_active: boolean;
+  created_at: string;
+}
+
 export interface SyncQueue {
   id?: number;
   table_name: string;
@@ -270,6 +280,7 @@ const db = new Dexie('BillDaleDB') as Dexie & {
   manager_approvals: EntityTable<ManagerApproval, 'id'>;
   return_orders: EntityTable<ReturnOrder, 'id'>;
   refunds: EntityTable<Refund, 'id'>;
+  staff_members: EntityTable<StaffMember, 'id'>;
   sync_queue: EntityTable<SyncQueue, 'id'>;
 };
 
@@ -322,6 +333,30 @@ db.version(3).stores({
   manager_approvals: 'id, business_id, branch_id, action',
   return_orders: 'id, original_invoice_id, branch_id, business_id, synced',
   refunds: 'id, invoice_id, synced',
+  sync_queue: '++id, table_name, operation',
+});
+
+// v4 → staff_members local table for billing attribution
+db.version(4).stores({
+  users: 'id, email, role, branch_id',
+  businesses: 'id, name',
+  business_members: 'id, business_id, user_id, role',
+  staff_invitations: 'id, business_id, token, accepted_at',
+  activity_logs: 'id, business_id, user_id, action, synced',
+  notifications: 'id, business_id, user_id, read',
+  branches: 'id, name, is_active',
+  products: 'id, name, category, brand, sku',
+  inventory: 'id, product_id, branch_id',
+  customers: 'id, business_id, phone, email, synced',
+  invoices: 'id, branch_id, user_id, customer_id, invoice_number, status, synced',
+  invoice_items: 'id, invoice_id, product_id',
+  held_orders: 'id, business_id, branch_id, user_id, customer_id',
+  cash_registers: 'id, branch_id, business_id, date, status',
+  coupons: 'id, business_id, code, is_active',
+  manager_approvals: 'id, business_id, branch_id, action',
+  return_orders: 'id, original_invoice_id, branch_id, business_id, synced',
+  refunds: 'id, invoice_id, synced',
+  staff_members: 'id, business_id, name, is_active',
   sync_queue: '++id, table_name, operation',
 });
 

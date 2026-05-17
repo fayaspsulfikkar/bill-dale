@@ -87,6 +87,10 @@ export default function POSPage() {
   const allBranches = useLiveQuery(() => db.branches.toArray(), []) ?? [];
   const allProducts = useLiveQuery(() => db.products.toArray(), []) || [];
   const allInventory = useLiveQuery(() => db.inventory.toArray(), []) || [];
+  const staffMembers = useLiveQuery(
+    () => businessId ? db.staff_members.where("business_id").equals(businessId).and(s => s.is_active).toArray() : [],
+    [businessId]
+  ) || [];
 
   // Active branch strictly from selectedBranchId
   const activeBranch = allBranches.find(b => b.id === selectedBranchId) ?? null;
@@ -551,15 +555,42 @@ export default function POSPage() {
                 {/* Customer Section */}
                 <CheckoutCustomerPanel />
 
-                {/* Staff Name */}
+                {/* Staff Name — Billed By */}
                 <div className="space-y-2">
                   <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Billed By</Label>
-                  <Input
-                    value={staffName}
-                    onChange={e => setStaffName(e.target.value)}
-                    placeholder={user?.name || user?.email || "Staff name"}
-                    className="h-9 bg-background border-border/50 text-sm"
-                  />
+                  {staffMembers.length > 0 ? (
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-1.5">
+                        {staffMembers.map(s => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => setStaffName(s.name)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+                              staffName === s.name
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-muted/50 text-foreground border-border/50 hover:bg-muted"
+                            }`}
+                          >
+                            {s.name}
+                          </button>
+                        ))}
+                      </div>
+                      <Input
+                        value={staffName}
+                        onChange={e => setStaffName(e.target.value)}
+                        placeholder="Or type a name…"
+                        className="h-8 bg-background border-border/50 text-xs"
+                      />
+                    </div>
+                  ) : (
+                    <Input
+                      value={staffName}
+                      onChange={e => setStaffName(e.target.value)}
+                      placeholder={user?.name || user?.email || "Staff name"}
+                      className="h-9 bg-background border-border/50 text-sm"
+                    />
+                  )}
                 </div>
 
                 <div className="flex-1" /> {/* Spacer */}
