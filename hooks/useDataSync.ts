@@ -28,7 +28,7 @@ export function useDataSync() {
         // Sync branches
         const { data: branches } = await client
           .from("branches")
-          .select("id, name, location, contact, is_active")
+          .select("id, name, branch_code, address, contact_person, phone, email, status, opening_date")
           .order("created_at", { ascending: true });
 
         if (branches && branches.length > 0) {

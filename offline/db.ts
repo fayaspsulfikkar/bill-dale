@@ -79,10 +79,13 @@ export interface Notification {
 export interface Branch {
   id: string;
   name: string;
-  location: string;
-  contact: string;
-  is_active: boolean;
   branch_code?: string;
+  address?: string; // made optional to not break existing records immediately
+  contact_person?: string;
+  phone?: string;
+  email?: string;
+  status: 'active' | 'inactive' | 'temporarily_closed' | 'under_maintenance' | 'archived';
+  opening_date?: string;
   password?: string;
 }
 
@@ -254,6 +257,24 @@ export interface StaffMember {
   created_at: string;
 }
 
+export interface StockTransfer {
+  id: string;
+  business_id: string;
+  source_branch_id: string;
+  dest_branch_id: string;
+  status: 'pending' | 'in_transit' | 'received' | 'cancelled';
+  notes?: string;
+  created_at: string;
+  received_at?: string;
+}
+
+export interface StockTransferItem {
+  id: string;
+  transfer_id: string;
+  product_id: string;
+  quantity: number;
+}
+
 export interface SyncQueue {
   id?: number;
   table_name: string;
@@ -283,6 +304,8 @@ const db = new Dexie('BillDaleDB') as Dexie & {
   refunds: EntityTable<Refund, 'id'>;
   staff_members: EntityTable<StaffMember, 'id'>;
   sync_queue: EntityTable<SyncQueue, 'id'>;
+  stock_transfers: EntityTable<StockTransfer, 'id'>;
+  stock_transfer_items: EntityTable<StockTransferItem, 'id'>;
 };
 
 // v1 → existing schema
@@ -359,6 +382,52 @@ db.version(4).stores({
   refunds: 'id, invoice_id, synced',
   staff_members: 'id, business_id, name, is_active',
   sync_queue: '++id, table_name, operation',
+});
+
+// v5 → branch management overhaul
+db.version(5).stores({
+  users: 'id, email, role, branch_id',
+  businesses: 'id, name',
+  business_members: 'id, business_id, user_id, role',
+  staff_invitations: 'id, business_id, token, accepted_at',
+  activity_logs: 'id, business_id, user_id, action, synced',
+  notifications: 'id, business_id, user_id, read',
+  branches: 'id, name, status', // Changed is_active to status
+  products: 'id, name, category, brand, sku',
+  inventory: 'id, product_id, branch_id',
+  customers: 'id, business_id, phone, email, synced',
+  invoices: 'id, branch_id, user_id, customer_id, invoice_number, status, synced',
+  invoice_items: 'id, invoice_id, product_id',
+  held_orders: 'id, business_id, branch_id, user_id, customer_id',
+  cash_registers: 'id, branch_id, business_id, date, status',
+  coupons: 'id, business_id, code, is_active',
+  manager_approvals: 'id, business_id, branch_id, action',
+  return_orders: 'id, original_invoice_id, branch_id, business_id, synced',
+  refunds: 'id, invoice_id, synced',
+  staff_members: 'id, business_id, name, is_active',
+  sync_queue: '++id, table_name, operation',
+  stock_transfers: 'id, business_id, source_branch_id, dest_branch_id, status',
+  stock_transfer_items: 'id, transfer_id, product_id',
+}).upgrade(tx => {
+  // Migrate branches: add status and address fields, remove is_active
+  return tx.table('branches').toCollection().modify(branch => {
+    if (branch.is_active !== undefined) {
+      branch.status = branch.is_active ? 'active' : 'inactive';
+      delete branch.is_active;
+    } else if (!branch.status) {
+      branch.status = 'active';
+    }
+    
+    if (branch.location !== undefined) {
+      branch.address = branch.location;
+      delete branch.location;
+    }
+    
+    if (branch.contact !== undefined) {
+      branch.phone = branch.contact;
+      delete branch.contact;
+    }
+  });
 });
 
 export type { db };

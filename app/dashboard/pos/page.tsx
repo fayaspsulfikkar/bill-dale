@@ -360,7 +360,7 @@ export default function POSPage() {
         {/* Product Selection Area */}
         <div className="flex-1 flex flex-col bg-background rounded-xl overflow-hidden shadow-sm border border-border/40">
           <OnlineStatusBar />
-          {activeBranch && !activeBranch.is_active && (
+          {activeBranch && activeBranch.status !== 'active' && (
             <div className="bg-destructive/10 text-destructive px-4 py-2 text-sm font-bold flex justify-center items-center gap-2 shadow-sm border-b border-destructive/20 shrink-0">
               <AlertCircle className="w-4 h-4" /> This branch is currently marked as INACTIVE. Sales may be restricted.
             </div>

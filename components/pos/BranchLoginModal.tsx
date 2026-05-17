@@ -45,7 +45,7 @@ export function BranchLoginModal() {
         return;
       }
 
-      if (!branch.is_active) {
+      if (branch.status !== 'active') {
         setError("This branch is currently inactive.");
         setIsLoading(false);
         return;
@@ -86,7 +86,7 @@ export function BranchLoginModal() {
               >
                 <option value="" disabled>-- Select a Branch --</option>
                 {branches?.map(b => (
-                  <option key={b.id} value={b.id}>{b.name} {b.location ? `(${b.location})` : ""}</option>
+                  <option key={b.id} value={b.id}>{b.name} {b.address ? `(${b.address})` : ""}</option>
                 ))}
               </select>
             </div>
