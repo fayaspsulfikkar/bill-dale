@@ -325,7 +325,7 @@ export default function POSPage() {
                     )}
                   </div>
                   <div className="text-right shrink-0 ml-3">
-                    <p className="font-black text-primary font-mono">{formatINR(variant.price)}</p>
+                    <p className="font-black text-primary font-mono">{formatINR(variant.price * (1 + variant.gst_percent / 100))}</p>
                     {isOut
                       ? <span className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded font-bold">Out of stock</span>
                       : stock <= 5
@@ -418,8 +418,8 @@ export default function POSPage() {
                       <div className="space-y-1">
                         {renderStockBadge(stock, representative.low_stock_threshold ?? 5)}
                         <div className="flex justify-between items-end pt-1 border-t border-border/40">
-                          <p className="font-black text-primary text-lg tracking-tight">{formatINR(representative.price)}</p>
-                          <span className="text-[10px] uppercase text-muted-foreground font-semibold">+{representative.gst_percent}% GST</span>
+                          <p className="font-black text-primary text-lg tracking-tight">{formatINR(representative.price * (1 + representative.gst_percent / 100))}</p>
+                          <span className="text-[10px] uppercase text-muted-foreground font-semibold">INCL {representative.gst_percent}% GST</span>
                         </div>
                         {cartQty > 0 && <div className="text-[10px] font-bold text-primary bg-primary/10 rounded px-1.5 py-0.5 text-center">{cartQty} in cart</div>}
                       </div>
