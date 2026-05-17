@@ -96,6 +96,15 @@ export default function POSPage() {
   const activeBranch = allBranches.find(b => b.id === selectedBranchId) ?? null;
   const resolvedBranchId = activeBranch?.id ?? null;
 
+  // Filter staff to only show those assigned to this branch (or globally assigned)
+  const availableStaff = useMemo(() => {
+    return staffMembers.filter(s => 
+      !s.branch_ids || 
+      s.branch_ids.length === 0 || 
+      (resolvedBranchId && s.branch_ids.includes(resolvedBranchId))
+    );
+  }, [staffMembers, resolvedBranchId]);
+
   // Branch must be unlocked via BranchLoginModal. No auto-setting.
 
   // Stock for current branch only
@@ -558,10 +567,10 @@ export default function POSPage() {
                 {/* Staff Name — Billed By */}
                 <div className="space-y-2">
                   <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Billed By</Label>
-                  {staffMembers.length > 0 ? (
+                  {availableStaff.length > 0 ? (
                     <div className="space-y-2">
                       <div className="flex flex-wrap gap-1.5">
-                        {staffMembers.map(s => (
+                        {availableStaff.map(s => (
                           <button
                             key={s.id}
                             type="button"
