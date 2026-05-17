@@ -183,7 +183,7 @@ export function DashboardSidebar() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] uppercase font-black text-green-600 tracking-wider">Active Branch</p>
-                <p className="text-sm font-bold truncate text-green-50">{activeBranch.name}</p>
+                <p className="text-sm font-bold truncate text-green-950 dark:text-green-50">{activeBranch.name}</p>
               </div>
               <button
                 onClick={() => setPinForUnlink(true)}
