@@ -8,6 +8,7 @@ import { formatINR } from "@/lib/formatCurrency";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Building2, MapPin, Phone, Mail, Calendar, Users, Package, ArrowRightLeft, TrendingUp, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
@@ -38,9 +39,25 @@ export default function BranchProfilePage() {
       .toArray();
   }, [branchId]) || [];
 
+  const [isAssignStaffOpen, setIsAssignStaffOpen] = useState(false);
+
   const branchStaff = useMemo(() => {
-    return staff.filter(s => !s.branch_ids || s.branch_ids.length === 0 || s.branch_ids.includes(branchId));
+    return staff.filter(s => s.branch_ids && s.branch_ids.includes(branchId));
   }, [staff, branchId]);
+
+  const toggleStaffAssignment = async (staffMember: any) => {
+    const currentIds = staffMember.branch_ids || [];
+    const isAssigned = currentIds.includes(branchId);
+    let newIds = [];
+    
+    if (isAssigned) {
+      newIds = currentIds.filter((id: string) => id !== branchId);
+    } else {
+      newIds = [...currentIds, branchId];
+    }
+    
+    await db.staff_members.update(staffMember.id, { branch_ids: newIds });
+  };
 
   const kpis = useMemo(() => {
     const todayStr = new Date().toISOString().split("T")[0];
@@ -191,8 +208,9 @@ export default function BranchProfilePage() {
         {/* STAFF TAB */}
         <TabsContent value="staff" className="space-y-4 outline-none">
           <Card className="bg-card/50 border-border/50 shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-border/50 bg-muted/20">
+            <div className="p-4 border-b border-border/50 bg-muted/20 flex items-center justify-between">
               <p className="text-sm text-muted-foreground">Staff members who have access to this branch.</p>
+              <Button size="sm" onClick={() => setIsAssignStaffOpen(true)}>Manage Staff</Button>
             </div>
             {branchStaff.length === 0 ? (
               <div className="p-12 text-center text-muted-foreground">
@@ -302,6 +320,47 @@ export default function BranchProfilePage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Assign Staff Dialog */}
+      <Dialog open={isAssignStaffOpen} onOpenChange={setIsAssignStaffOpen}>
+        <DialogContent className="bg-card border-border sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Manage Branch Staff</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4 max-h-[60vh] overflow-y-auto">
+            {staff.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center italic">No staff members created yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {staff.map(s => {
+                  const isAssigned = s.branch_ids?.includes(branchId);
+                  return (
+                    <div key={s.id} className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-background hover:bg-muted/30 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
+                          {s.name[0].toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{s.name}</p>
+                          <p className="text-xs text-muted-foreground">{s.role_title || "Staff"}</p>
+                        </div>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        variant={isAssigned ? "destructive" : "default"}
+                        className={isAssigned ? "bg-destructive/10 text-destructive hover:bg-destructive/20 border-0" : ""}
+                        onClick={() => toggleStaffAssignment(s)}
+                      >
+                        {isAssigned ? "Remove" : "Assign"}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

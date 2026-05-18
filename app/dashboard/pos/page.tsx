@@ -96,12 +96,11 @@ export default function POSPage() {
   const activeBranch = allBranches.find(b => b.id === selectedBranchId) ?? null;
   const resolvedBranchId = activeBranch?.id ?? null;
 
-  // Filter staff to only show those assigned to this branch (or globally assigned)
+  // Filter staff to only show those EXPLICITLY assigned to this branch
   const availableStaff = useMemo(() => {
+    if (!resolvedBranchId) return [];
     return staffMembers.filter(s => 
-      !s.branch_ids || 
-      s.branch_ids.length === 0 || 
-      (resolvedBranchId && s.branch_ids.includes(resolvedBranchId))
+      s.branch_ids && s.branch_ids.includes(resolvedBranchId)
     );
   }, [staffMembers, resolvedBranchId]);
 
