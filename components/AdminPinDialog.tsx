@@ -117,9 +117,9 @@ export function AdminPinDialog({
           transition={{ duration: 0.25 }}
           className="fixed inset-0 z-[999] flex items-center justify-center"
           style={{
-            backdropFilter: "blur(48px) saturate(200%) brightness(0.85)",
-            WebkitBackdropFilter: "blur(48px) saturate(200%) brightness(0.85)",
-            backgroundColor: "rgba(0, 0, 0, 0.08)",
+            backdropFilter: "blur(24px) saturate(150%)",
+            WebkitBackdropFilter: "blur(24px) saturate(150%)",
+            backgroundColor: "rgba(0, 0, 0, 0.4)",
           }}
           onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         >
@@ -153,19 +153,19 @@ export function AdminPinDialog({
             >
               {/* Glass layers */}
               <div className="absolute inset-0 rounded-3xl"
-                style={{ backdropFilter: "blur(80px) saturate(180%) brightness(1.05)", WebkitBackdropFilter: "blur(80px) saturate(180%) brightness(1.05)", background: "rgba(255, 255, 255, 0.04)" }}
+                style={{ backdropFilter: "blur(40px) saturate(150%)", WebkitBackdropFilter: "blur(40px) saturate(150%)", background: "rgba(15, 23, 42, 0.7)" }}
               />
               <motion.div
                 animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
                 transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                className="absolute inset-0 rounded-3xl opacity-[0.07]"
-                style={{ background: "linear-gradient(135deg, transparent 0%, rgba(120,119,198,1) 20%, rgba(255,154,158,1) 40%, rgba(250,208,196,1) 60%, rgba(167,220,225,1) 80%, transparent 100%)", backgroundSize: "300% 300%" }}
+                className="absolute inset-0 rounded-3xl opacity-[0.15]"
+                style={{ background: "linear-gradient(135deg, transparent 0%, rgba(99,102,241,1) 20%, rgba(139,92,246,1) 40%, rgba(236,72,153,1) 60%, rgba(59,130,246,1) 80%, transparent 100%)", backgroundSize: "300% 300%" }}
               />
               <div className="absolute inset-x-0 top-0 h-px rounded-t-3xl"
-                style={{ background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.9) 30%, rgba(255,255,255,1) 50%, rgba(255,255,255,0.9) 70%, transparent 100%)" }}
+                style={{ background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 30%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0.4) 70%, transparent 100%)" }}
               />
               <div className="absolute inset-0 rounded-3xl pointer-events-none"
-                style={{ boxShadow: ["0 0 0 0.5px rgba(255,255,255,0.15)", "0 32px 80px rgba(0,0,0,0.25)", "0 8px 24px rgba(0,0,0,0.18)", "inset 0 1px 0 rgba(255,255,255,0.12)", "inset 0 -1px 0 rgba(0,0,0,0.08)"].join(", ") }}
+                style={{ boxShadow: ["0 0 0 1px rgba(255,255,255,0.1)", "0 32px 64px rgba(0,0,0,0.5)", "0 8px 24px rgba(0,0,0,0.3)", "inset 0 1px 0 rgba(255,255,255,0.15)", "inset 0 -1px 0 rgba(0,0,0,0.2)"].join(", ") }}
               />
 
               {/* Content */}
@@ -190,8 +190,8 @@ export function AdminPinDialog({
                     <div className="absolute top-0 inset-x-0 h-1/2 rounded-t-2xl opacity-20" style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.5), transparent)" }} />
                     <Shield className="w-7 h-7 relative z-10" style={{ color: "rgba(139,150,255,1)" }} />
                   </div>
-                  <h2 className="text-xl font-bold tracking-tight" style={{ color: "rgba(255,255,255,0.95)", textShadow: "0 2px 12px rgba(0,0,0,0.6)" }}>{title}</h2>
-                  <p className="text-sm mt-1.5" style={{ color: "rgba(255,255,255,0.55)", textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}>Enter your 4-digit admin PIN</p>
+                  <h2 className="text-xl font-bold tracking-tight text-white">{title}</h2>
+                  <p className="text-sm mt-1.5 text-slate-300">Enter your 4-digit admin PIN</p>
                 </div>
 
                 {/* Error */}
@@ -228,7 +228,7 @@ export function AdminPinDialog({
                   {/* Visual 4-box display */}
                   <div
                     className="flex items-center justify-center gap-4 py-4 px-4 rounded-2xl"
-                    style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.12)", boxShadow: "inset 0 2px 12px rgba(0,0,0,0.15)" }}
+                    style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "inset 0 4px 12px rgba(0,0,0,0.3)" }}
                     onClick={() => inputRef.current?.focus()}
                   >
                     {[0, 1, 2, 3].map((i) => {
@@ -242,22 +242,22 @@ export function AdminPinDialog({
                           className="w-12 h-12 rounded-xl flex items-center justify-center relative"
                           style={{
                             background: filled
-                              ? "rgba(99,102,241,0.15)"
-                              : "rgba(255,255,255,0.04)",
+                              ? "rgba(99,102,241,0.2)"
+                              : "rgba(255,255,255,0.05)",
                             border: active
-                              ? "1px solid rgba(99,102,241,0.7)"
+                              ? "2px solid rgba(139,150,255,1)"
                               : filled
-                              ? "0.5px solid rgba(99,102,241,0.4)"
-                              : "0.5px solid rgba(255,255,255,0.1)",
+                              ? "1px solid rgba(99,102,241,0.5)"
+                              : "1px solid rgba(255,255,255,0.1)",
                             boxShadow: active
-                              ? "0 0 0 3px rgba(99,102,241,0.12), 0 0 16px rgba(99,102,241,0.2)"
+                              ? "0 0 0 4px rgba(99,102,241,0.15), 0 0 20px rgba(99,102,241,0.3)"
                               : "none",
                           }}
                         >
                           {filled && (
                             <div
                               className="w-3 h-3 rounded-full"
-                              style={{ background: "rgba(139,150,255,1)", boxShadow: "0 0 8px rgba(99,102,241,0.6)" }}
+                              style={{ background: "rgba(255,255,255,0.9)", boxShadow: "0 0 10px rgba(255,255,255,0.8)" }}
                             />
                           )}
                           {active && !checking && (
@@ -265,14 +265,14 @@ export function AdminPinDialog({
                               animate={{ opacity: [1, 0] }}
                               transition={{ duration: 0.8, repeat: Infinity }}
                               className="w-0.5 h-6 rounded-full"
-                              style={{ background: "rgba(139,150,255,0.8)" }}
+                              style={{ background: "rgba(255,255,255,0.8)" }}
                             />
                           )}
                         </motion.div>
                       );
                     })}
                   </div>
-                  <p className="text-center text-xs mt-2" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  <p className="text-center text-xs mt-3 text-slate-400 font-medium tracking-wide">
                     Tap here, then type your PIN
                   </p>
                 </div>
@@ -284,7 +284,7 @@ export function AdminPinDialog({
                     value={durationMins}
                     onChange={(e) => setDurationMins(Number(e.target.value))}
                     className="w-full h-10 px-3 rounded-xl text-sm focus:outline-none appearance-none"
-                    style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.75)", backdropFilter: "blur(8px)" }}
+                    style={{ background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.9)", backdropFilter: "blur(8px)" }}
                   >
                     <option value={10} className="bg-slate-900 text-white">Unlock for 10 minutes</option>
                     <option value={20} className="bg-slate-900 text-white">Unlock for 20 minutes</option>
@@ -303,26 +303,26 @@ export function AdminPinDialog({
                   className="w-full py-3.5 font-bold rounded-2xl text-base transition-all text-white relative overflow-hidden disabled:opacity-30"
                   style={{
                     background: pin.length >= 4
-                      ? "linear-gradient(135deg, rgba(99,102,241,0.75) 0%, rgba(139,92,246,0.75) 100%)"
+                      ? "linear-gradient(135deg, rgba(99,102,241,0.9) 0%, rgba(139,92,246,0.9) 100%)"
                       : "rgba(255,255,255,0.05)",
                     border: pin.length >= 4
-                      ? "0.5px solid rgba(139,150,255,0.5)"
-                      : "0.5px solid rgba(255,255,255,0.08)",
+                      ? "1px solid rgba(167,139,250,0.6)"
+                      : "1px solid rgba(255,255,255,0.1)",
                     boxShadow: pin.length >= 4
-                      ? "0 8px 32px rgba(99,102,241,0.3), 0 2px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.15)"
+                      ? "0 8px 32px rgba(99,102,241,0.4), 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.2)"
                       : "none",
                     backdropFilter: "blur(12px)",
                   }}
                 >
                   {pin.length >= 4 && (
-                    <div className="absolute inset-x-0 top-0 h-1/2 rounded-t-2xl pointer-events-none" style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 100%)" }} />
+                    <div className="absolute inset-x-0 top-0 h-1/2 rounded-t-2xl pointer-events-none" style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 100%)" }} />
                   )}
                   <span className="relative z-10">
                     {checking ? "Verifying…" : "Unlock"}
                   </span>
                 </motion.button>
 
-                <p className="text-center text-xs mt-4" style={{ color: "rgba(255,255,255,0.3)" }}>
+                <p className="text-center text-xs mt-4 text-slate-400">
                   Press Enter to unlock
                 </p>
               </div>
