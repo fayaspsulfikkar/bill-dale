@@ -296,7 +296,6 @@ export default function POSPage() {
   return (
     <>
       {/* Global modals / drawers */}
-      <BranchLoginModal />
       <HeldOrdersDrawer />
       <RecentOrdersDrawer onStartReturn={(id) => { setShowReturn(true); }} />
       <CashRegisterModal />

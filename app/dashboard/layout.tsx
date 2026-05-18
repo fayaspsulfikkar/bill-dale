@@ -1,9 +1,15 @@
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { NotificationBell } from "@/components/NotificationBell";
+import { BranchLoginModal } from "@/components/pos/BranchLoginModal";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen relative">
+      {/* Global Terminal Lock Modal */}
+      <div className="z-50">
+        <BranchLoginModal />
+      </div>
+
       <div className="print:hidden">
         <DashboardSidebar />
       </div>
