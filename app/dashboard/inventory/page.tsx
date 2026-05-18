@@ -70,17 +70,26 @@ export default function InventoryPage() {
 
   // Ordered branches: selected first
   const orderedBranches = useMemo(() => {
-    if (branchFilter === "all") return branches;
-    const sel = branches.find(b => b.id === branchFilter);
-    return sel ? [sel, ...branches.filter(b => b.id !== branchFilter)] : branches;
-  }, [branches, branchFilter]);
+    const primaryBranchId = branchFilter !== "all" ? branchFilter : selectedBranchId;
+    if (!primaryBranchId) return branches;
+    
+    const sel = branches.find(b => b.id === primaryBranchId);
+    return sel ? [sel, ...branches.filter(b => b.id !== primaryBranchId)] : branches;
+  }, [branches, branchFilter, selectedBranchId]);
 
   const filtered = useMemo(() => {
     let p = products;
-    if (search) { const q = search.toLowerCase(); p = p.filter(pr => pr.name.toLowerCase().includes(q) || pr.sku.toLowerCase().includes(q) || pr.brand.toLowerCase().includes(q)); }
-    if (branchFilter !== "all") p = [...p].sort((a, b) => getBranchStock(b.id, branchFilter) - getBranchStock(a.id, branchFilter));
+    if (search) { 
+      const q = search.toLowerCase(); 
+      p = p.filter(pr => pr.name.toLowerCase().includes(q) || pr.sku.toLowerCase().includes(q) || pr.brand.toLowerCase().includes(q)); 
+    }
+    
+    const sortBranchId = branchFilter !== "all" ? branchFilter : selectedBranchId;
+    if (sortBranchId) {
+      p = [...p].sort((a, b) => getBranchStock(b.id, sortBranchId) - getBranchStock(a.id, sortBranchId));
+    }
     return p;
-  }, [products, search, branchFilter, inventory]);
+  }, [products, search, branchFilter, inventory, selectedBranchId]);
 
   const handleEditClick = (productId: string, branchId: string, stock: number) => {
     // If the branch being edited is NOT the currently locked terminal branch, require Admin PIN
