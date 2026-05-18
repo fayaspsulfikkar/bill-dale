@@ -128,16 +128,29 @@ export function AdminPinDialog({
             <motion.div
               animate={shake ? { x: [-10, 10, -8, 8, -4, 4, 0] } : {}}
               transition={{ duration: 0.4 }}
-              className="relative bg-slate-900 text-slate-50 rounded-2xl shadow-2xl border border-slate-700/50 overflow-hidden"
+              className="relative text-slate-50 rounded-2xl shadow-[0_24px_60px_-12px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.15)] overflow-hidden"
+              style={{
+                background: "linear-gradient(135deg, rgba(30,41,59,0.7) 0%, rgba(15,23,42,0.6) 100%)",
+                backdropFilter: "blur(40px)",
+                WebkitBackdropFilter: "blur(40px)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderTopColor: "rgba(255,255,255,0.2)"
+              }}
             >
+              {/* Subtle light reflections for liquid effect */}
+              <div className="absolute inset-0 pointer-events-none rounded-2xl overflow-hidden">
+                <div className="absolute top-0 left-0 w-[150%] h-[150%] bg-gradient-to-br from-white/5 via-transparent to-transparent -rotate-12 translate-x-[-20%] translate-y-[-20%]" />
+                <div className="absolute bottom-0 right-0 w-32 h-32 bg-indigo-500/10 blur-[40px] rounded-full" />
+              </div>
+
               {/* Top Accent Line */}
-              <div className="h-1 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+              <div className="relative z-10 h-[2px] w-full bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-400 opacity-80" />
               
-              <div className="p-8">
+              <div className="relative z-10 p-8">
                 {/* Close Button */}
                 <button
                   onClick={onClose}
-                  className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-colors"
+                  className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-full transition-colors border border-white/5"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -196,10 +209,10 @@ export function AdminPinDialog({
                           key={i}
                           className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl transition-all duration-200 ${
                             active
-                              ? "bg-slate-800 border-2 border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]"
+                              ? "bg-indigo-500/20 border-2 border-indigo-400 shadow-[0_0_20px_rgba(129,140,248,0.3)] backdrop-blur-md"
                               : filled
-                              ? "bg-indigo-500/10 border border-indigo-500/30"
-                              : "bg-slate-800/50 border border-slate-700"
+                              ? "bg-indigo-500/10 border border-indigo-400/30 backdrop-blur-md"
+                              : "bg-white/5 border border-white/10 backdrop-blur-md shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]"
                           }`}
                         >
                           {filled ? (
@@ -225,7 +238,7 @@ export function AdminPinDialog({
                   <select
                     value={durationMins}
                     onChange={(e) => setDurationMins(Number(e.target.value))}
-                    className="w-full h-11 pl-10 pr-4 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 appearance-none"
+                    className="w-full h-11 pl-10 pr-4 bg-black/20 backdrop-blur-md border border-white/10 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 appearance-none shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]"
                   >
                     <option value={10}>Unlock for 10 minutes</option>
                     <option value={20}>Unlock for 20 minutes</option>
@@ -239,12 +252,19 @@ export function AdminPinDialog({
                 <button
                   onClick={() => handleVerify()}
                   disabled={checking || pin.length < 4}
-                  className={`w-full py-3.5 rounded-xl font-bold text-base transition-all duration-200 ${
+                  className={`w-full py-3.5 rounded-xl font-bold text-base transition-all duration-200 relative overflow-hidden ${
                     pin.length >= 4
-                      ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/25"
-                      : "bg-slate-800 text-slate-500 cursor-not-allowed"
+                      ? "text-white shadow-[0_8px_20px_rgba(99,102,241,0.4)] border border-indigo-400/50"
+                      : "bg-white/5 text-slate-400 cursor-not-allowed border border-white/5"
                   }`}
+                  style={pin.length >= 4 ? {
+                    background: "linear-gradient(135deg, rgba(99,102,241,0.8) 0%, rgba(139,92,246,0.8) 100%)",
+                    backdropFilter: "blur(10px)"
+                  } : {}}
                 >
+                  {pin.length >= 4 && (
+                    <div className="absolute inset-0 bg-gradient-to-t from-transparent to-white/20 pointer-events-none" />
+                  )}
                   {checking ? "Verifying..." : "Unlock Access"}
                 </button>
               </div>
