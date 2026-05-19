@@ -115,28 +115,28 @@ export function AdminPinDialog({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[999] flex items-center justify-center bg-black/40 p-4"
+          className="fixed inset-0 z-[999] flex items-center justify-center bg-black/20 backdrop-blur-sm p-4"
           onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         >
           {/* Animated Liquid Orbs (Behind the glass) */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none flex items-center justify-center">
             <motion.div
               animate={{
-                scale: [1, 1.2, 1],
-                x: [0, 50, 0],
-                y: [0, -30, 0],
+                scale: [1, 1.3, 1],
+                x: [0, 80, 0],
+                y: [0, -60, 0],
               }}
-              transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute w-[400px] h-[400px] rounded-full bg-indigo-600/30 blur-[80px]"
+              transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute w-[500px] h-[500px] rounded-full bg-indigo-500/40 blur-[100px]"
             />
             <motion.div
               animate={{
-                scale: [1, 1.1, 1],
-                x: [0, -40, 0],
-                y: [0, 40, 0],
+                scale: [1, 1.2, 1],
+                x: [0, -70, 0],
+                y: [0, 70, 0],
               }}
-              transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-              className="absolute w-[350px] h-[350px] rounded-full bg-purple-600/30 blur-[80px]"
+              transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+              className="absolute w-[450px] h-[450px] rounded-full bg-fuchsia-500/30 blur-[100px]"
             />
           </div>
 
@@ -150,24 +150,25 @@ export function AdminPinDialog({
             <motion.div
               animate={shake ? { x: [-10, 10, -8, 8, -4, 4, 0] } : {}}
               transition={{ duration: 0.4 }}
-              className="relative rounded-2xl overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.6)]"
+              className="relative rounded-3xl overflow-hidden"
               style={{
-                background: "linear-gradient(145deg, rgba(20,20,30,0.5) 0%, rgba(10,10,15,0.7) 100%)",
-                backdropFilter: "blur(24px) saturate(120%)",
-                WebkitBackdropFilter: "blur(24px) saturate(120%)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                borderTopColor: "rgba(255,255,255,0.25)",
-                boxShadow: "inset 0 1px 1px rgba(255,255,255,0.1), inset 0 0 20px rgba(255,255,255,0.02)"
+                background: "linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.01) 100%)",
+                backdropFilter: "blur(40px) saturate(180%)",
+                WebkitBackdropFilter: "blur(40px) saturate(180%)",
+                border: "1px solid rgba(255,255,255,0.15)",
+                borderTopColor: "rgba(255,255,255,0.3)",
+                borderLeftColor: "rgba(255,255,255,0.2)",
+                boxShadow: "0 30px 60px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.2)"
               }}
             >
               {/* Top Liquid Reflection Highlight */}
-              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/50 to-transparent" />
               
               <div className="relative z-10 p-8 text-white">
                 {/* Close Button */}
                 <button
                   onClick={onClose}
-                  className="absolute top-4 right-4 p-2 text-white/50 hover:text-white bg-white/5 hover:bg-white/10 rounded-full transition-colors border border-white/5"
+                  className="absolute top-5 right-5 p-2 text-white/60 hover:text-white bg-white/5 hover:bg-white/20 rounded-full transition-all border border-white/10"
                 >
                   <X className="w-4 h-4" />
                 </button>
