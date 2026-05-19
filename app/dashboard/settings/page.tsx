@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -125,6 +125,7 @@ function SecurityTab() {
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const business = useLiveQuery(
     () => businessId ? db.businesses.get(businessId) : undefined,
@@ -132,27 +133,10 @@ function SecurityTab() {
   );
   const hasPin = !!business?.admin_pin;
 
-  const handleDigit = (digit: string, target: "pin" | "confirm") => {
-    if (target === "pin") {
-      const next = (pin + digit).slice(0, 4);
-      setPin(next);
-      setError("");
-      if (next.length === 4) setStep("confirm");
-    } else {
-      const next = (confirmPin + digit).slice(0, 4);
-      setConfirmPin(next);
-      setError("");
-      if (next.length === 4) {
-        // Auto-submit
-        if (next !== pin) {
-          setError("PINs do not match. Try again.");
-          setConfirmPin("");
-        } else {
-          savePin(next);
-        }
-      }
-    }
-  };
+  // Keep input focused
+  const focusInput = () => setTimeout(() => inputRef.current?.focus(), 50);
+
+  useEffect(() => { focusInput(); }, [step]);
 
   const savePin = async (value: string) => {
     if (!businessId) return;
@@ -172,11 +156,50 @@ function SecurityTab() {
     }
   };
 
+  const handleInput = (value: string) => {
+    // Only keep digits, max 4
+    const digits = value.replace(/\D/g, "").slice(0, 4);
+    setError("");
+
+    if (step === "enter") {
+      setPin(digits);
+      if (digits.length === 4) {
+        setStep("confirm");
+        setConfirmPin("");
+      }
+    } else {
+      setConfirmPin(digits);
+      if (digits.length === 4) {
+        if (digits !== pin) {
+          setError("PINs do not match. Try again.");
+          setConfirmPin("");
+          focusInput();
+        } else {
+          savePin(digits);
+        }
+      }
+    }
+  };
+
+  const handleBackspace = () => {
+    if (step === "confirm") {
+      if (confirmPin.length === 0) {
+        setStep("enter");
+        setPin(pin.slice(0, -1));
+      } else {
+        setConfirmPin(confirmPin.slice(0, -1));
+      }
+    } else {
+      setPin(pin.slice(0, -1));
+    }
+  };
+
   const reset = () => {
     setPin("");
     setConfirmPin("");
     setStep("enter");
     setError("");
+    focusInput();
   };
 
   const currentValue = step === "enter" ? pin : confirmPin;
@@ -219,7 +242,7 @@ function SecurityTab() {
             </motion.div>
           )}
 
-          <div>
+          <div onClick={focusInput} className="cursor-pointer">
             <Label className="text-xs text-muted-foreground uppercase tracking-wider">
               {step === "enter" ? "Enter New PIN" : "Confirm PIN"}
             </Label>
@@ -243,20 +266,23 @@ function SecurityTab() {
                 );
               })}
             </div>
-            {/* Hidden input for keyboard capture */}
+            {/* Hidden input — captures keyboard on desktop & mobile */}
             <input
+              ref={inputRef}
               autoFocus
               type="text"
               inputMode="numeric"
-              value=""
-              className="opacity-0 absolute w-0 h-0"
+              pattern="[0-9]*"
+              value={currentValue}
+              onChange={(e) => handleInput(e.target.value)}
               onKeyDown={(e) => {
-                if (/^\d$/.test(e.key)) handleDigit(e.key, step === "enter" ? "pin" : "confirm");
                 if (e.key === "Backspace") {
-                  if (step === "confirm") setConfirmPin(confirmPin.slice(0, -1));
-                  else setPin(pin.slice(0, -1));
+                  e.preventDefault();
+                  handleBackspace();
                 }
               }}
+              className="sr-only"
+              aria-label="PIN input"
             />
           </div>
 
