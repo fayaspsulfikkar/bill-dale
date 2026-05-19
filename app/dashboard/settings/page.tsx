@@ -345,19 +345,26 @@ function ReceiptsTab() {
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !supabase || !businessId) return;
-    setUploading(true);
-    try {
-      const ext = file.name.split(".").pop();
-      const path = `receipts/${businessId}/logo.${ext}`;
-      const { error } = await supabase.storage.from("assets").upload(path, file, { upsert: true });
-      if (!error) {
-        const { data } = supabase.storage.from("assets").getPublicUrl(path);
-        setLogoUrl(data.publicUrl);
-      }
-    } finally {
-      setUploading(false);
+    if (!file) return;
+
+    if (file.size > 1024 * 1024) {
+      alert("Logo image must be less than 1MB");
+      return;
     }
+
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        setLogoUrl(event.target.result as string);
+      }
+      setUploading(false);
+    };
+    reader.onerror = () => {
+      alert("Failed to read file");
+      setUploading(false);
+    };
+    reader.readAsDataURL(file);
   };
 
   return (

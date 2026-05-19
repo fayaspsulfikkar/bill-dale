@@ -84,6 +84,7 @@ export default function POSPage() {
   const { selectedCustomer, selectedBranchId, setSelectedBranchId, setShowHeldOrders, setShowRecentOrders, setShowCashRegister, setShowQuickAdd, setShowShortcutsHelp, orderNotes, resetPOSState } = usePOSStore();
 
   const business = useLiveQuery(() => businessId ? db.businesses.get(businessId) : undefined, [businessId]);
+  const settings = useLiveQuery(() => businessId ? db.business_settings.where("business_id").equals(businessId).first() : undefined, [businessId]);
   const allBranches = useLiveQuery(() => db.branches.toArray(), []) ?? [];
   const allProducts = useLiveQuery(() => db.products.toArray(), []) || [];
   const allInventory = useLiveQuery(() => db.inventory.toArray(), []) || [];
@@ -884,6 +885,7 @@ export default function POSPage() {
             amountTendered={completedTransaction.amountTendered}
             changeDue={completedTransaction.changeDue}
             businessName={business?.name}
+            settings={settings}
           />
         )}
         {printMode === 'a4' && completedTransaction && (

@@ -1,4 +1,4 @@
-import { Invoice } from "@/offline/db";
+import { Invoice, BusinessSettings } from "@/offline/db";
 import { format } from "date-fns";
 
 export function PrintThermalReceipt({
@@ -7,14 +7,18 @@ export function PrintThermalReceipt({
   amountTendered,
   changeDue,
   businessName = "BILL-DALE STORE",
+  settings,
 }: {
   invoice: Invoice;
   items: any[];
   amountTendered?: number;
   changeDue?: number;
   businessName?: string;
+  settings?: BusinessSettings;
 }) {
   const subtotal = invoice.total_amount - invoice.tax_amount + invoice.discount;
+  const width = settings?.receipt_paper_size || "80mm";
+  const showGst = settings?.receipt_show_gst ?? true;
 
   const divider = (char = "-") =>
     char.repeat(32);
@@ -22,7 +26,7 @@ export function PrintThermalReceipt({
   return (
     <div
       style={{
-        width: "80mm",
+        width: width,
         margin: "0 auto",
         padding: "6mm 4mm",
         background: "white",
@@ -35,6 +39,13 @@ export function PrintThermalReceipt({
     >
       {/* Store Header */}
       <div style={{ textAlign: "center", marginBottom: "6px" }}>
+        {settings?.receipt_logo_url && (
+          <img 
+            src={settings.receipt_logo_url} 
+            alt="Logo" 
+            style={{ maxWidth: "80%", maxHeight: "80px", margin: "0 auto 8px auto", display: "block", objectFit: "contain" }} 
+          />
+        )}
         <div
           style={{
             fontSize: "14pt",
@@ -45,9 +56,17 @@ export function PrintThermalReceipt({
         >
           {businessName}
         </div>
-        <div style={{ fontSize: "8pt", marginTop: "2px" }}>123 Business Ave, Tech District</div>
-        <div style={{ fontSize: "8pt" }}>Tel: +1 234 567 8900</div>
-        <div style={{ fontSize: "8pt" }}>GSTIN: 29XXXXX0000X1Z5</div>
+        {settings?.receipt_header ? (
+          <div style={{ fontSize: "8pt", marginTop: "4px", whiteSpace: "pre-wrap" }}>
+            {settings.receipt_header}
+          </div>
+        ) : (
+          <>
+            <div style={{ fontSize: "8pt", marginTop: "2px" }}>123 Business Ave, Tech District</div>
+            <div style={{ fontSize: "8pt" }}>Tel: +1 234 567 8900</div>
+          </>
+        )}
+        {showGst && <div style={{ fontSize: "8pt", marginTop: "2px" }}>GSTIN: 29XXXXX0000X1Z5</div>}
         <div style={{ marginTop: "6px", fontWeight: "bold", letterSpacing: "1.5px", fontSize: "9pt" }}>
           ** TAX INVOICE **
         </div>
@@ -132,10 +151,12 @@ export function PrintThermalReceipt({
           <span>Subtotal:</span>
           <span>₹{subtotal.toFixed(2)}</span>
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
-          <span>GST (Tax):</span>
-          <span>₹{invoice.tax_amount.toFixed(2)}</span>
-        </div>
+        {showGst && (
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
+            <span>GST (Tax):</span>
+            <span>₹{invoice.tax_amount.toFixed(2)}</span>
+          </div>
+        )}
         {invoice.discount > 0 && (
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
             <span>Discount:</span>
@@ -186,11 +207,19 @@ export function PrintThermalReceipt({
 
       {/* Footer */}
       <div style={{ textAlign: "center", fontSize: "8pt", color: "#333" }}>
-        <div style={{ fontWeight: "bold", marginBottom: "4px", fontSize: "9pt" }}>
-          THANK YOU FOR YOUR PURCHASE!
-        </div>
-        <div>Please retain this receipt</div>
-        <div>No returns without receipt.</div>
+        {settings?.receipt_footer ? (
+          <div style={{ whiteSpace: "pre-wrap", marginBottom: "4px" }}>
+            {settings.receipt_footer}
+          </div>
+        ) : (
+          <>
+            <div style={{ fontWeight: "bold", marginBottom: "4px", fontSize: "9pt" }}>
+              THANK YOU FOR YOUR PURCHASE!
+            </div>
+            <div>Please retain this receipt</div>
+            <div>No returns without receipt.</div>
+          </>
+        )}
         <div style={{ marginTop: "8px", fontSize: "7pt", color: "#777" }}>
           Powered by Bill-Dale POS
         </div>

@@ -59,6 +59,7 @@ function groupByDate(invoices: any[]) {
 export function RecentOrdersDrawer({ onStartReturn }: Props) {
   const { businessId } = useAuthStore();
   const business = useLiveQuery(() => businessId ? db.businesses.get(businessId) : undefined, [businessId]);
+  const settings = useLiveQuery(() => businessId ? db.business_settings.where("business_id").equals(businessId).first() : undefined, [businessId]);
   const { showRecentOrders, setShowRecentOrders } = usePOSStore();
   const [search, setSearch] = useState("");
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
@@ -123,7 +124,7 @@ export function RecentOrdersDrawer({ onStartReturn }: Props) {
       {printMode && selectedInvoice && (
         <div className="hidden print:block">
           {printMode === "thermal"
-            ? <PrintThermalReceipt invoice={selectedInvoice} items={selectedItems} businessName={business?.name} />
+            ? <PrintThermalReceipt invoice={selectedInvoice} items={selectedItems} businessName={business?.name} settings={settings} />
             : <PrintA4Invoice invoice={selectedInvoice} items={selectedItems} businessName={business?.name} />
           }
         </div>
