@@ -257,6 +257,17 @@ export interface StaffMember {
   created_at: string;
 }
 
+export interface BusinessSettings {
+  id: string;
+  business_id: string;
+  receipt_header?: string;
+  receipt_footer?: string;
+  receipt_logo_url?: string;
+  receipt_paper_size: '80mm' | '58mm';
+  receipt_show_gst: boolean;
+  updated_at: string;
+}
+
 export interface StockTransfer {
   id: string;
   business_id: string;
@@ -306,6 +317,7 @@ const db = new Dexie('BillDaleDB') as Dexie & {
   sync_queue: EntityTable<SyncQueue, 'id'>;
   stock_transfers: EntityTable<StockTransfer, 'id'>;
   stock_transfer_items: EntityTable<StockTransferItem, 'id'>;
+  business_settings: EntityTable<BusinessSettings, 'id'>;
 };
 
 // v1 → existing schema
@@ -428,6 +440,33 @@ db.version(5).stores({
       delete branch.contact;
     }
   });
+});
+
+// v6 → business_settings table for receipt customization
+db.version(6).stores({
+  users: 'id, email, role, branch_id',
+  businesses: 'id, name',
+  business_members: 'id, business_id, user_id, role',
+  staff_invitations: 'id, business_id, token, accepted_at',
+  activity_logs: 'id, business_id, user_id, action, synced',
+  notifications: 'id, business_id, user_id, read',
+  branches: 'id, name, status',
+  products: 'id, name, category, brand, sku',
+  inventory: 'id, product_id, branch_id',
+  customers: 'id, business_id, phone, email, synced',
+  invoices: 'id, branch_id, user_id, customer_id, invoice_number, status, synced',
+  invoice_items: 'id, invoice_id, product_id',
+  held_orders: 'id, business_id, branch_id, user_id, customer_id',
+  cash_registers: 'id, branch_id, business_id, date, status',
+  coupons: 'id, business_id, code, is_active',
+  manager_approvals: 'id, business_id, branch_id, action',
+  return_orders: 'id, original_invoice_id, branch_id, business_id, synced',
+  refunds: 'id, invoice_id, synced',
+  staff_members: 'id, business_id, name, is_active',
+  sync_queue: '++id, table_name, operation',
+  stock_transfers: 'id, business_id, source_branch_id, dest_branch_id, status',
+  stock_transfer_items: 'id, transfer_id, product_id',
+  business_settings: 'id, business_id',
 });
 
 export type { db };

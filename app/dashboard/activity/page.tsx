@@ -1,38 +1,57 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import db from "@/offline/db";
 import { useAuthStore } from "@/store/authStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { RoleGuard } from "@/components/guards/RoleGuard";
-import { Activity, Search, X, UserPlus, UserMinus, UserCheck, UserX, Pencil, ArrowRightLeft, ShoppingCart, Package, BarChart3 } from "lucide-react";
-import { formatDistanceToNow, format } from "date-fns";
+import { DateRangeFilter, getDateRange, type DateRange } from "@/components/dashboard/DateRangeFilter";
+import {
+  Activity, Search, X, UserPlus, UserMinus, UserCheck, UserX, Pencil,
+  ArrowRightLeft, ShoppingCart, Package, BarChart3, Download,
+} from "lucide-react";
+import { formatDistanceToNow, format, parseISO } from "date-fns";
 
-const ACTION_META: Record<string, { label: string; icon: typeof Activity; color: string }> = {
-  business_created: { label: "Business Created", icon: BarChart3, color: "text-primary" },
-  user_login: { label: "User Login", icon: UserCheck, color: "text-blue-400" },
-  invoice_created: { label: "Invoice Created", icon: ShoppingCart, color: "text-green-400" },
-  product_added: { label: "Product Added", icon: Package, color: "text-purple-400" },
-  stock_updated: { label: "Stock Updated", icon: Package, color: "text-amber-400" },
-  staff_invited: { label: "Staff Invited", icon: UserPlus, color: "text-blue-400" },
-  staff_joined: { label: "Staff Joined", icon: UserCheck, color: "text-green-400" },
-  // Staff management actions
-  staff_added: { label: "Staff Added", icon: UserPlus, color: "text-green-400" },
-  staff_edited: { label: "Staff Edited", icon: Pencil, color: "text-blue-400" },
-  staff_deactivated: { label: "Staff Deactivated", icon: UserMinus, color: "text-amber-400" },
-  staff_activated: { label: "Staff Activated", icon: UserCheck, color: "text-green-400" },
-  staff_deleted: { label: "Staff Removed", icon: UserX, color: "text-red-400" },
-  staff_transferred: { label: "Staff Transferred", icon: ArrowRightLeft, color: "text-purple-400" },
+type Severity = "info" | "success" | "warning" | "danger";
+
+const ACTION_META: Record<string, { label: string; icon: typeof Activity; color: string; severity: Severity }> = {
+  business_created: { label: "Business Created", icon: BarChart3, color: "text-primary", severity: "info" },
+  user_login: { label: "User Login", icon: UserCheck, color: "text-blue-400", severity: "info" },
+  invoice_created: { label: "Invoice Created", icon: ShoppingCart, color: "text-green-400", severity: "success" },
+  product_added: { label: "Product Added", icon: Package, color: "text-purple-400", severity: "success" },
+  stock_updated: { label: "Stock Updated", icon: Package, color: "text-amber-400", severity: "warning" },
+  staff_invited: { label: "Staff Invited", icon: UserPlus, color: "text-blue-400", severity: "info" },
+  staff_joined: { label: "Staff Joined", icon: UserCheck, color: "text-green-400", severity: "success" },
+  staff_added: { label: "Staff Added", icon: UserPlus, color: "text-green-400", severity: "success" },
+  staff_edited: { label: "Staff Edited", icon: Pencil, color: "text-blue-400", severity: "info" },
+  staff_deactivated: { label: "Staff Deactivated", icon: UserMinus, color: "text-amber-400", severity: "danger" },
+  staff_activated: { label: "Staff Activated", icon: UserCheck, color: "text-green-400", severity: "success" },
+  staff_deleted: { label: "Staff Removed", icon: UserX, color: "text-red-400", severity: "danger" },
+  staff_transferred: { label: "Staff Transferred", icon: ArrowRightLeft, color: "text-purple-400", severity: "info" },
+};
+
+const SEVERITY_BG: Record<Severity, string> = {
+  info: "",
+  success: "bg-green-500/5",
+  warning: "bg-amber-500/5",
+  danger: "bg-red-500/5",
 };
 
 type FilterType = "all" | "staff" | "sales" | "inventory";
+
+const STAFF_ACTIONS = ["staff_added", "staff_edited", "staff_deactivated", "staff_activated", "staff_deleted", "staff_transferred", "staff_invited", "staff_joined"];
+const SALES_ACTIONS = ["invoice_created"];
+const INVENTORY_ACTIONS = ["product_added", "stock_updated"];
 
 export default function ActivityPage() {
   const { businessId } = useAuthStore();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterType>("all");
+  const [dateRange, setDateRange] = useState<DateRange>(getDateRange("30days"));
+  const [filterBranchId, setFilterBranchId] = useState<string | "all">("all");
 
   const logs = useLiveQuery(
     () => businessId
@@ -41,15 +60,34 @@ export default function ActivityPage() {
     [businessId]
   );
 
-  const STAFF_ACTIONS = ["staff_added", "staff_edited", "staff_deactivated", "staff_activated", "staff_deleted", "staff_transferred", "staff_invited", "staff_joined"];
-  const SALES_ACTIONS = ["invoice_created"];
-  const INVENTORY_ACTIONS = ["product_added", "stock_updated"];
+  const branches = useLiveQuery(() => db.branches.toArray(), []);
 
   const filteredLogs = useMemo(() => {
     let list = logs || [];
+
+    // Date range filter
+    list = list.filter(l => {
+      const d = parseISO(l.created_at);
+      return d >= dateRange.from && d <= dateRange.to;
+    });
+
+    // Branch filter
+    if (filterBranchId !== "all") {
+      list = list.filter(l => {
+        const details = l.details || {};
+        const branchIds = details.branches || details.branch_id || details.branch_ids;
+        if (Array.isArray(branchIds)) return branchIds.includes(filterBranchId);
+        if (typeof branchIds === "string") return branchIds === filterBranchId;
+        return true; // show logs without branch info in all filters
+      });
+    }
+
+    // Category filter
     if (filter === "staff") list = list.filter(l => STAFF_ACTIONS.includes(l.action));
     if (filter === "sales") list = list.filter(l => SALES_ACTIONS.includes(l.action));
     if (filter === "inventory") list = list.filter(l => INVENTORY_ACTIONS.includes(l.action));
+
+    // Search filter
     if (search.trim()) {
       const q = search.toLowerCase().trim();
       list = list.filter(l =>
@@ -58,7 +96,7 @@ export default function ActivityPage() {
       );
     }
     return list;
-  }, [logs, filter, search]);
+  }, [logs, filter, search, dateRange, filterBranchId]);
 
   const filterCounts = useMemo(() => {
     const all = logs || [];
@@ -76,22 +114,66 @@ export default function ActivityPage() {
     if (details.staff_name) parts.push(`Staff: ${details.staff_name}`);
     if (details.role) parts.push(`Role: ${details.role}`);
     if (details.branches) parts.push(`Branches: ${(details.branches as string[]).join(", ")}`);
-    // Fallback for unknown detail types
     if (parts.length === 0) {
-      return Object.entries(details).map(([k, v]) => `${k}: ${v}`).join(" · ");
+      return Object.entries(details)
+        .filter(([k]) => k !== "actor_name")
+        .map(([k, v]) => `${k}: ${v}`).join(" · ");
     }
     return parts.join(" · ");
   };
 
+  const exportCSV = useCallback(() => {
+    const rows = [["Date", "Time", "Action", "Details", "Actor"]];
+    filteredLogs.forEach(log => {
+      const meta = ACTION_META[log.action];
+      const details = log.details || {};
+      rows.push([
+        format(new Date(log.created_at), "yyyy-MM-dd"),
+        format(new Date(log.created_at), "hh:mm a"),
+        meta?.label || log.action,
+        formatDetails(details) || "",
+        (details.actor_name as string) || "",
+      ]);
+    });
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `activity_log_${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [filteredLogs]);
+
   return (
     <RoleGuard adminOnly>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Activity Log</h1>
-          <p className="text-muted-foreground">Audit trail of all actions in your business account.</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Activity Log</h1>
+            <p className="text-muted-foreground">Audit trail of all actions in your business account.</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={exportCSV} className="gap-2 shrink-0">
+            <Download className="w-4 h-4" /> Export CSV
+          </Button>
         </div>
 
-        {/* Search + Filters */}
+        {/* Date Range + Branch Filter */}
+        <div className="flex flex-wrap items-center gap-3">
+          <DateRangeFilter value={dateRange} onChange={setDateRange} />
+          <select
+            value={filterBranchId}
+            onChange={(e) => setFilterBranchId(e.target.value)}
+            className="h-9 px-3 rounded-lg border border-border bg-card/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            <option value="all">All Branches</option>
+            {(branches || []).map(b => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Search + Category Filters */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -143,10 +225,12 @@ export default function ActivityPage() {
                   const meta = ACTION_META[log.action];
                   const Icon = meta?.icon || Activity;
                   const color = meta?.color || "text-muted-foreground";
+                  const severity = meta?.severity || "info";
                   const detailStr = formatDetails(log.details);
+                  const actorName = (log.details?.actor_name as string) || null;
 
                   return (
-                    <div key={log.id} className="flex items-start gap-3 p-3 rounded-xl hover:bg-muted/20 transition-colors group">
+                    <div key={log.id} className={`flex items-start gap-3 p-3 rounded-xl hover:bg-muted/20 transition-colors group ${SEVERITY_BG[severity]}`}>
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${color} bg-current/10`} style={{ backgroundColor: 'transparent' }}>
                         <Icon className={`w-4 h-4 ${color}`} />
                       </div>
@@ -156,6 +240,9 @@ export default function ActivityPage() {
                         </p>
                         {detailStr && (
                           <p className="text-xs text-muted-foreground mt-0.5">{detailStr}</p>
+                        )}
+                        {actorName && (
+                          <p className="text-[10px] text-muted-foreground/70 mt-1">by {actorName}</p>
                         )}
                       </div>
                       <div className="text-right shrink-0">
