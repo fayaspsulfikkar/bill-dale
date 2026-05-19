@@ -115,11 +115,11 @@ export function AdminPinDialog({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[999] flex items-center justify-center bg-black/70 backdrop-blur-md p-4"
+          className="fixed inset-0 z-[999] flex items-center justify-center bg-black/70 backdrop-blur-xl p-4"
           onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         >
           {/* Animated Liquid Orbs (Behind the glass) */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none flex items-center justify-center opacity-70">
+          <div className="absolute inset-0 overflow-hidden pointer-events-none flex items-center justify-center opacity-80">
             <motion.div
               animate={{
                 scale: [1, 1.3, 1],
@@ -153,14 +153,13 @@ export function AdminPinDialog({
               className="relative rounded-3xl overflow-hidden"
               style={{
                 background: "transparent",
-                backdropFilter: "blur(40px)",
-                WebkitBackdropFilter: "blur(40px)",
                 border: "1px solid rgba(255,255,255,0.2)",
-                boxShadow: "0 30px 60px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -1px 0 rgba(255,255,255,0.1)"
+                boxShadow: "0 40px 80px rgba(0,0,0,0.8), inset 0 2px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(255,255,255,0.1), inset 1px 0 0 rgba(255,255,255,0.1), inset -1px 0 0 rgba(255,255,255,0.1)"
               }}
             >
               {/* Top Liquid Reflection Highlight */}
-              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+              <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
+              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
               
               <div className="relative z-10 p-8 text-white drop-shadow-md">
                 {/* Close Button */}
