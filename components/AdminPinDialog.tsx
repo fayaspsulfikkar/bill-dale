@@ -115,11 +115,11 @@ export function AdminPinDialog({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[999] flex items-center justify-center bg-black/20 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-[999] flex items-center justify-center bg-black/70 backdrop-blur-md p-4"
           onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         >
           {/* Animated Liquid Orbs (Behind the glass) */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none flex items-center justify-center">
+          <div className="absolute inset-0 overflow-hidden pointer-events-none flex items-center justify-center opacity-70">
             <motion.div
               animate={{
                 scale: [1, 1.3, 1],
@@ -152,23 +152,21 @@ export function AdminPinDialog({
               transition={{ duration: 0.4 }}
               className="relative rounded-3xl overflow-hidden"
               style={{
-                background: "linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.01) 100%)",
-                backdropFilter: "blur(40px) saturate(180%)",
-                WebkitBackdropFilter: "blur(40px) saturate(180%)",
-                border: "1px solid rgba(255,255,255,0.15)",
-                borderTopColor: "rgba(255,255,255,0.3)",
-                borderLeftColor: "rgba(255,255,255,0.2)",
-                boxShadow: "0 30px 60px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.2)"
+                background: "transparent",
+                backdropFilter: "blur(40px)",
+                WebkitBackdropFilter: "blur(40px)",
+                border: "1px solid rgba(255,255,255,0.2)",
+                boxShadow: "0 30px 60px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -1px 0 rgba(255,255,255,0.1)"
               }}
             >
               {/* Top Liquid Reflection Highlight */}
-              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/40 to-transparent" />
               
-              <div className="relative z-10 p-8 text-white">
+              <div className="relative z-10 p-8 text-white drop-shadow-md">
                 {/* Close Button */}
                 <button
                   onClick={onClose}
-                  className="absolute top-5 right-5 p-2 text-white/60 hover:text-white bg-white/5 hover:bg-white/20 rounded-full transition-all border border-white/10"
+                  className="absolute top-5 right-5 p-2 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-all border border-white/20"
                 >
                   <X className="w-4 h-4" />
                 </button>
