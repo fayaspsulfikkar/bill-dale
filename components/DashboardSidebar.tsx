@@ -74,6 +74,18 @@ export function DashboardSidebar() {
     return () => clearInterval(interval);
   }, [staffMode, staffModeUnlockUntil, setStaffMode]);
 
+  // Enforce staff mode lock: redirect if timer expires while on a locked page
+  useEffect(() => {
+    if (staffMode) {
+      const lockedItems = ALL_NAV_ITEMS.filter(i => i.staffLocked);
+      // Check if current path starts with any of the locked nav item hrefs
+      const isLockedPage = lockedItems.some(i => pathname.startsWith(i.href));
+      if (isLockedPage) {
+        router.push("/dashboard");
+      }
+    }
+  }, [staffMode, pathname, router]);
+
   // Multi-business: fetch all businesses this user is a member of
   const memberships = useLiveQuery(
     () => user ? db.business_members.where("user_id").equals(user.id).toArray() : [],
