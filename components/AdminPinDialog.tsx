@@ -245,42 +245,62 @@ export function AdminPinDialog({
                   </div>
                 </div>
 
-                {/* Duration Select */}
-                <div className="relative mb-8">
-                  <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                    <Clock className="w-4 h-4 text-white/50" />
+                {/* Duration Chips */}
+                <div className="mb-8">
+                  <div className="flex items-center gap-2 mb-3 text-sm text-slate-400">
+                    <Clock className="w-4 h-4" />
+                    <span>Unlock duration</span>
                   </div>
-                  <select
-                    value={durationMins}
-                    onChange={(e) => setDurationMins(Number(e.target.value))}
-                    className="w-full h-11 pl-10 pr-4 bg-white/10 border border-white/20 rounded-lg text-sm text-white focus:outline-none focus:border-white focus:ring-1 focus:ring-white appearance-none shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]"
-                  >
-                    <option value={10} className="bg-slate-900 text-white">Unlock for 10 minutes</option>
-                    <option value={20} className="bg-slate-900 text-white">Unlock for 20 minutes</option>
-                    <option value={30} className="bg-slate-900 text-white">Unlock for 30 minutes</option>
-                    <option value={60} className="bg-slate-900 text-white">Unlock for 1 hour</option>
-                    <option value={120} className="bg-slate-900 text-white">Unlock for 2 hours</option>
-                  </select>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { label: "10m", value: 10 },
+                      { label: "20m", value: 20 },
+                      { label: "30m", value: 30 },
+                      { label: "1hr", value: 60 },
+                      { label: "2hr", value: 120 },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setDurationMins(opt.value)}
+                        className={`flex-1 min-w-[3rem] py-1.5 rounded-lg text-xs font-medium transition-all ${
+                          durationMins === opt.value
+                            ? "bg-indigo-500 text-white shadow-[0_0_10px_rgba(99,102,241,0.5)] border border-indigo-400"
+                            : "bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                {/* Unlock Button */}
-                <button
-                  onClick={() => handleVerify()}
-                  disabled={checking || pin.length < 4}
-                  className={`w-full py-3.5 rounded-xl font-bold text-base transition-all duration-200 relative overflow-hidden ${
-                    pin.length >= 4
-                      ? "text-white shadow-[0_8px_20px_rgba(99,102,241,0.4)] border border-indigo-400/50"
-                      : "bg-white/5 text-white/40 cursor-not-allowed border border-white/10"
-                  }`}
-                  style={pin.length >= 4 ? {
-                    background: "linear-gradient(135deg, rgba(99,102,241,0.8) 0%, rgba(139,92,246,0.8) 100%)",
-                  } : {}}
-                >
-                  {pin.length >= 4 && (
-                    <div className="absolute inset-0 bg-gradient-to-t from-transparent to-white/20 pointer-events-none" />
-                  )}
-                  {checking ? "Verifying..." : "Unlock Access"}
-                </button>
+                {/* Actions */}
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={() => handleVerify()}
+                    disabled={checking || pin.length < 4}
+                    className={`w-full py-3.5 rounded-xl font-bold text-base transition-all duration-200 relative overflow-hidden ${
+                      pin.length >= 4
+                        ? "text-white shadow-[0_8px_20px_rgba(99,102,241,0.4)] border border-indigo-400/50"
+                        : "bg-white/5 text-white/40 cursor-not-allowed border border-white/10"
+                    }`}
+                    style={pin.length >= 4 ? {
+                      background: "linear-gradient(135deg, rgba(99,102,241,0.8) 0%, rgba(139,92,246,0.8) 100%)",
+                    } : {}}
+                  >
+                    {pin.length >= 4 && (
+                      <div className="absolute inset-0 bg-gradient-to-t from-transparent to-white/20 pointer-events-none" />
+                    )}
+                    {checking ? "Verifying..." : "Unlock Access"}
+                  </button>
+
+                  <button
+                    onClick={onClose}
+                    className="w-full py-3 rounded-xl font-medium text-sm text-slate-400 hover:text-white bg-transparent hover:bg-white/5 border border-transparent hover:border-white/10 transition-all"
+                  >
+                    Back to Staff Mode
+                  </button>
+                </div>
               </div>
             </motion.div>
           </motion.div>
