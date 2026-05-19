@@ -224,10 +224,10 @@ export function AdminPinDialog({
                           key={i}
                           className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl transition-all duration-200 ${
                             active
-                              ? "bg-indigo-500/20 border-2 border-indigo-400 shadow-[0_0_20px_rgba(129,140,248,0.3)] backdrop-blur-md"
+                              ? "bg-indigo-500/20 border-2 border-indigo-400 shadow-[0_0_20px_rgba(129,140,248,0.3)]"
                               : filled
-                              ? "bg-indigo-500/10 border border-indigo-400/30 backdrop-blur-md"
-                              : "bg-white/5 border border-white/10 backdrop-blur-md shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]"
+                              ? "bg-indigo-500/10 border border-indigo-400/30"
+                              : "bg-white/5 border border-white/10 shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]"
                           }`}
                         >
                           {filled ? (
@@ -248,18 +248,18 @@ export function AdminPinDialog({
                 {/* Duration Select */}
                 <div className="relative mb-8">
                   <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                    <Clock className="w-4 h-4 text-slate-400" />
+                    <Clock className="w-4 h-4 text-white/50" />
                   </div>
                   <select
                     value={durationMins}
                     onChange={(e) => setDurationMins(Number(e.target.value))}
-                    className="w-full h-11 pl-10 pr-4 bg-black/20 backdrop-blur-md border border-white/10 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 appearance-none shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]"
+                    className="w-full h-11 pl-10 pr-4 bg-white/10 border border-white/20 rounded-lg text-sm text-white focus:outline-none focus:border-white focus:ring-1 focus:ring-white appearance-none shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]"
                   >
-                    <option value={10}>Unlock for 10 minutes</option>
-                    <option value={20}>Unlock for 20 minutes</option>
-                    <option value={30}>Unlock for 30 minutes</option>
-                    <option value={60}>Unlock for 1 hour</option>
-                    <option value={120}>Unlock for 2 hours</option>
+                    <option value={10} className="bg-slate-900 text-white">Unlock for 10 minutes</option>
+                    <option value={20} className="bg-slate-900 text-white">Unlock for 20 minutes</option>
+                    <option value={30} className="bg-slate-900 text-white">Unlock for 30 minutes</option>
+                    <option value={60} className="bg-slate-900 text-white">Unlock for 1 hour</option>
+                    <option value={120} className="bg-slate-900 text-white">Unlock for 2 hours</option>
                   </select>
                 </div>
 
@@ -270,11 +270,10 @@ export function AdminPinDialog({
                   className={`w-full py-3.5 rounded-xl font-bold text-base transition-all duration-200 relative overflow-hidden ${
                     pin.length >= 4
                       ? "text-white shadow-[0_8px_20px_rgba(99,102,241,0.4)] border border-indigo-400/50"
-                      : "bg-white/5 text-slate-400 cursor-not-allowed border border-white/5"
+                      : "bg-white/5 text-white/40 cursor-not-allowed border border-white/10"
                   }`}
                   style={pin.length >= 4 ? {
                     background: "linear-gradient(135deg, rgba(99,102,241,0.8) 0%, rgba(139,92,246,0.8) 100%)",
-                    backdropFilter: "blur(10px)"
                   } : {}}
                 >
                   {pin.length >= 4 && (
