@@ -88,9 +88,59 @@ export default function SettingsPage() {
 /* ─── GENERAL TAB ─── */
 function GeneralTab() {
   const router = useRouter();
+  const { businessId } = useAuthStore();
+  const settings = useLiveQuery(
+    () => businessId ? db.business_settings.where("business_id").equals(businessId).first() : undefined,
+    [businessId]
+  );
+
+  const [form, setForm] = useState({
+    currency_symbol: "₹",
+    low_stock_threshold: 10,
+    pos_quick_add: true,
+    pos_sound_effects: true,
+  });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (settings) {
+      setForm({
+        currency_symbol: settings.currency_symbol || "₹",
+        low_stock_threshold: settings.low_stock_threshold ?? 10,
+        pos_quick_add: settings.pos_quick_add ?? true,
+        pos_sound_effects: settings.pos_sound_effects ?? true,
+      });
+    }
+  }, [settings]);
+
+  const handleSave = async () => {
+    if (!businessId) return;
+    setSaving(true);
+    try {
+      const record = {
+        id: settings?.id || crypto.randomUUID(),
+        business_id: businessId,
+        ...(settings || {}),
+        ...form,
+        updated_at: new Date().toISOString(),
+      } as any;
+      
+      await db.business_settings.put(record);
+      if (supabase) {
+        await supabase.from("business_settings").upsert(record);
+      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <h2 className="text-lg font-semibold">General</h2>
+      
       <motion.button
         whileHover={{ scale: 1.01 }}
         whileTap={{ scale: 0.99 }}
@@ -112,6 +162,79 @@ function GeneralTab() {
           </CardHeader>
         </Card>
       </motion.button>
+
+      <Card className="bg-card/50 border-border/50">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Settings2 className="w-4 h-4 text-primary" /> App Preferences
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Currency Symbol</Label>
+              <Input 
+                value={form.currency_symbol} 
+                onChange={(e) => setForm(prev => ({ ...prev, currency_symbol: e.target.value }))} 
+                placeholder="e.g. ₹, $, €"
+                maxLength={5}
+                className="max-w-[120px]"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Low Stock Alert Threshold</Label>
+              <Input 
+                type="number"
+                min="0"
+                value={form.low_stock_threshold} 
+                onChange={(e) => setForm(prev => ({ ...prev, low_stock_threshold: Number(e.target.value) }))} 
+                className="max-w-[120px]"
+              />
+              <p className="text-xs text-muted-foreground">Items falling below this quantity will show as Low Stock.</p>
+            </div>
+          </div>
+
+          <div className="space-y-4 pt-2 border-t border-border/50">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm font-medium">POS Quick Add Mode</Label>
+                <p className="text-xs text-muted-foreground">Clicking a product directly adds it to cart instead of opening details.</p>
+              </div>
+              <button
+                onClick={() => setForm(prev => ({ ...prev, pos_quick_add: !prev.pos_quick_add }))}
+                className={`relative w-11 h-6 rounded-full transition-colors ${form.pos_quick_add ? "bg-primary" : "bg-muted"}`}
+              >
+                <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform shadow-sm ${form.pos_quick_add ? "translate-x-5" : ""}`} />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm font-medium">POS Sound Effects</Label>
+                <p className="text-xs text-muted-foreground">Play a beep sound when scanning or adding items to the cart.</p>
+              </div>
+              <button
+                onClick={() => setForm(prev => ({ ...prev, pos_sound_effects: !prev.pos_sound_effects }))}
+                className={`relative w-11 h-6 rounded-full transition-colors ${form.pos_sound_effects ? "bg-primary" : "bg-muted"}`}
+              >
+                <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform shadow-sm ${form.pos_sound_effects ? "translate-x-5" : ""}`} />
+              </button>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-border/50 flex flex-col sm:flex-row items-center gap-4">
+            <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto h-10 font-semibold px-8">
+              {saving ? "Saving..." : "Save Preferences"}
+            </Button>
+            {saved && (
+              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-green-500 text-sm font-medium flex items-center gap-1">
+                <Check className="w-4 h-4" /> Saved successfully
+              </motion.span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

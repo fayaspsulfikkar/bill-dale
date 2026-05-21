@@ -265,6 +265,14 @@ export interface BusinessSettings {
   receipt_logo_url?: string;
   receipt_paper_size: '80mm' | '58mm';
   receipt_show_gst: boolean;
+  
+  // App Preferences
+  currency_code?: string;
+  currency_symbol?: string;
+  pos_quick_add?: boolean;
+  pos_sound_effects?: boolean;
+  low_stock_threshold?: number;
+  
   updated_at: string;
 }
 
