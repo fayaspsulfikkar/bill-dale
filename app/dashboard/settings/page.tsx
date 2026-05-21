@@ -86,6 +86,29 @@ export default function SettingsPage() {
 }
 
 /* ─── GENERAL TAB ─── */
+const CURRENCIES = [
+  { code: "INR", symbol: "\u20b9", name: "Indian Rupee",       flag: "\uD83C\uDDEE\uD83C\uDDF3" },
+  { code: "USD", symbol: "$",     name: "US Dollar",          flag: "\uD83C\uDDFA\uD83C\uDDF8" },
+  { code: "EUR", symbol: "\u20ac", name: "Euro",               flag: "\uD83C\uDDEA\uD83C\uDDFA" },
+  { code: "GBP", symbol: "\u00a3", name: "British Pound",      flag: "\uD83C\uDDEC\uD83C\uDDE7" },
+  { code: "AED", symbol: "\u062f.\u0625", name: "UAE Dirham", flag: "\uD83C\uDDE6\uD83C\uDDEA" },
+  { code: "SAR", symbol: "\u0631.\u0633", name: "Saudi Riyal", flag: "\uD83C\uDDF8\uD83C\uDDE6" },
+  { code: "JPY", symbol: "\u00a5", name: "Japanese Yen",       flag: "\uD83C\uDDEF\uD83C\uDDF5" },
+  { code: "CNY", symbol: "\u00a5", name: "Chinese Yuan",       flag: "\uD83C\uDDE8\uD83C\uDDF3" },
+  { code: "SGD", symbol: "S$",    name: "Singapore Dollar",   flag: "\uD83C\uDDF8\uD83C\uDDEC" },
+  { code: "MYR", symbol: "RM",    name: "Malaysian Ringgit",  flag: "\uD83C\uDDF2\uD83C\uDDFE" },
+  { code: "BDT", symbol: "\u09f3", name: "Bangladeshi Taka",  flag: "\uD83C\uDDE7\uD83C\uDDE9" },
+  { code: "PKR", symbol: "\u20a8", name: "Pakistani Rupee",   flag: "\uD83C\uDDF5\uD83C\uDDF0" },
+  { code: "LKR", symbol: "\u20a8", name: "Sri Lankan Rupee",  flag: "\uD83C\uDDF1\uD83C\uDDF0" },
+  { code: "NPR", symbol: "\u20a8", name: "Nepalese Rupee",    flag: "\uD83C\uDDF3\uD83C\uDDF5" },
+  { code: "AUD", symbol: "A$",    name: "Australian Dollar",  flag: "\uD83C\uDDE6\uD83C\uDDFA" },
+  { code: "CAD", symbol: "C$",    name: "Canadian Dollar",   flag: "\uD83C\uDDE8\uD83C\uDDE6" },
+  { code: "CHF", symbol: "Fr",    name: "Swiss Franc",        flag: "\uD83C\uDDE8\uD83C\uDDED" },
+  { code: "KRW", symbol: "\u20a9", name: "South Korean Won",  flag: "\uD83C\uDDF0\uD83C\uDDF7" },
+  { code: "THB", symbol: "\u0e3f", name: "Thai Baht",         flag: "\uD83C\uDDF9\uD83C\uDDED" },
+  { code: "IDR", symbol: "Rp",    name: "Indonesian Rupiah", flag: "\uD83C\uDDEE\uD83C\uDDE9" },
+];
+
 function GeneralTab() {
   const router = useRouter();
   const { businessId } = useAuthStore();
@@ -95,7 +118,8 @@ function GeneralTab() {
   );
 
   const [form, setForm] = useState({
-    currency_symbol: "₹",
+    currency_code: "INR",
+    currency_symbol: "\u20b9",
     low_stock_threshold: 10,
     pos_quick_add: true,
     pos_sound_effects: true,
@@ -106,7 +130,8 @@ function GeneralTab() {
   useEffect(() => {
     if (settings) {
       setForm({
-        currency_symbol: settings.currency_symbol || "₹",
+        currency_code: settings.currency_code || "INR",
+        currency_symbol: settings.currency_symbol || "\u20b9",
         low_stock_threshold: settings.low_stock_threshold ?? 10,
         pos_quick_add: settings.pos_quick_add ?? true,
         pos_sound_effects: settings.pos_sound_effects ?? true,
@@ -172,14 +197,22 @@ function GeneralTab() {
         <CardContent className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>Currency Symbol</Label>
-              <Input 
-                value={form.currency_symbol} 
-                onChange={(e) => setForm(prev => ({ ...prev, currency_symbol: e.target.value }))} 
-                placeholder="e.g. ₹, $, €"
-                maxLength={5}
-                className="max-w-[120px]"
-              />
+              <Label>Currency</Label>
+              <select
+                value={form.currency_code}
+                onChange={(e) => {
+                  const selected = CURRENCIES.find(c => c.code === e.target.value);
+                  if (selected) setForm(prev => ({ ...prev, currency_code: selected.code, currency_symbol: selected.symbol }));
+                }}
+                className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                {CURRENCIES.map(c => (
+                  <option key={c.code} value={c.code}>
+                    {c.flag} {c.code} — {c.name} ({c.symbol})
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">Selected symbol: <span className="font-bold text-foreground">{form.currency_symbol}</span></p>
             </div>
             
             <div className="space-y-2">
