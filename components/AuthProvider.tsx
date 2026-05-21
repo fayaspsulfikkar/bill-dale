@@ -5,11 +5,12 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
 import { getBusinessMembership, ADMIN_PERMISSIONS, STAFF_PERMISSIONS } from "@/lib/auth";
+import db from "@/offline/db";
 import type { User } from "@supabase/supabase-js";
 
 const PUBLIC_PATHS = ["/login", "/invite", "/auth"];
 const ONBOARDING_PREFIX = "/onboarding";
-const READY_TIMEOUT_MS = 6000; // never stay stuck more than 6s
+const READY_TIMEOUT_MS = 8000; // never stay stuck more than 8s
 
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setSession, clearSession, isAuthenticated, hasCompletedOnboarding } = useAuthStore();
@@ -132,22 +133,41 @@ async function hydrateUser(
   // so we can fall back to it if the query times out or fails
   const persisted = useAuthStore.getState();
 
-  // Race membership query against a 5s timeout
+  // Race membership query against a 7s timeout
   const membership = await Promise.race([
     getBusinessMembership(supabaseUser.id),
-    new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 7000)),
   ]);
 
-  // If query returned null (timeout / RLS issue / network), preserve the
-  // persisted onboarding/business state so we never redirect to /onboarding
-  // on a simple page refresh.
-  const businessId   = membership?.business_id   ?? persisted.businessId;
-  const businessName = membership?.businesses?.name ?? persisted.businessName;
-  const hasOnboarded = membership !== null
+  // --- Fallback chain ---
+  // 1. Supabase membership (most authoritative)
+  // 2. Zustand localStorage persisted state
+  // 3. Dexie IndexedDB (survives device restarts and localStorage wipes)
+  let businessId   = membership?.business_id   ?? persisted.businessId;
+  let businessName = membership?.businesses?.name ?? persisted.businessName;
+  let hasOnboarded = membership !== null
     ? !!membership.business_id
-    : persisted.hasCompletedOnboarding; // ← never downgrade on failure
+    : persisted.hasCompletedOnboarding;
 
-  const role = (membership?.role ?? (persisted.hasCompletedOnboarding ? "admin" : null)) as "admin" | "staff" | null;
+  // If still no businessId after Supabase + Zustand, try Dexie as last resort
+  if (!businessId) {
+    try {
+      const localMember = await db.business_members
+        .where("user_id").equals(supabaseUser.id)
+        .first();
+      if (localMember?.business_id) {
+        businessId = localMember.business_id;
+        hasOnboarded = true;
+        // Try to get the business name from Dexie too
+        const localBiz = await db.businesses.get(localMember.business_id);
+        if (localBiz?.name) businessName = localBiz.name;
+      }
+    } catch {
+      // Dexie not available (SSR or private mode) — ignore
+    }
+  }
+
+  const role = (membership?.role ?? (hasOnboarded ? "admin" : null)) as "admin" | "staff" | null;
   const permissions =
     role === "admin"
       ? ADMIN_PERMISSIONS
