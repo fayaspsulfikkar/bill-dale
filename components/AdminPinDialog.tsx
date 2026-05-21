@@ -7,6 +7,7 @@ import { Shield, X, Clock } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import db from "@/offline/db";
+import { useLiveQuery } from "dexie-react-hooks";
 
 interface AdminPinDialogProps {
   open: boolean;
@@ -30,7 +31,20 @@ export function AdminPinDialog({
   const inputRef = useRef<HTMLInputElement>(null);
   const [mounted, setMounted] = useState(false);
 
+  // Read default timer from settings
+  const settings = useLiveQuery(
+    () => businessId ? db.business_settings.where("business_id").equals(businessId).first() : undefined,
+    [businessId]
+  );
+
   useEffect(() => { setMounted(true); }, []);
+
+  // Sync default timer when settings load
+  useEffect(() => {
+    if (settings?.staff_mode_default_minutes) {
+      setDurationMins(settings.staff_mode_default_minutes);
+    }
+  }, [settings]);
 
   useEffect(() => {
     if (open) {

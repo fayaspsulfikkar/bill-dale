@@ -272,7 +272,34 @@ export interface BusinessSettings {
   pos_quick_add?: boolean;
   pos_sound_effects?: boolean;
   low_stock_threshold?: number;
-  
+
+  // Tax & Invoicing
+  default_gst_rate?: number;
+  invoice_prefix?: string;
+  invoice_start_number?: number;
+  invoice_number_padding?: number;
+
+  // Display & Formatting
+  date_format?: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
+  time_format?: '12h' | '24h';
+  decimal_places?: number;
+
+  // POS Behavior
+  default_payment_method?: 'cash' | 'card' | 'upi';
+  staff_mode_default_minutes?: number;
+  auto_session_timeout_minutes?: number;
+  barcode_format?: 'ean13' | 'code128' | 'qr';
+
+  // Business Hours (informational for analytics)
+  business_hours_open?: string;
+  business_hours_close?: string;
+  business_days?: string[];
+
+  // Notifications
+  notify_low_stock?: boolean;
+  notify_daily_summary?: boolean;
+  notify_sync_failures?: boolean;
+
   updated_at: string;
 }
 

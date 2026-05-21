@@ -64,7 +64,7 @@ export default function POSPage() {
           setPrintMode(null);
           clearCart();
           resetPOSState();
-          setPaymentMethod("card");
+          setPaymentMethod((settings?.default_payment_method as any) || "card");
           setAmountTendered("");
           setSplitDetails({ cash: 0, card: 0, upi: 0 });
         }, 300);
@@ -92,6 +92,14 @@ export default function POSPage() {
     () => businessId ? db.staff_members.where("business_id").equals(businessId).and(s => s.is_active).toArray() : [],
     [businessId]
   ) || [];
+
+  // Sync default payment method from settings
+  useEffect(() => {
+    if (settings?.default_payment_method) {
+      setPaymentMethod(settings.default_payment_method as any);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings?.default_payment_method]);
 
   // Active branch strictly from selectedBranchId
   const activeBranch = allBranches.find(b => b.id === selectedBranchId) ?? null;
@@ -220,7 +228,7 @@ export default function POSPage() {
     try {
       const invoiceId = crypto.randomUUID();
       const timestamp = new Date().toISOString();
-      const invoiceNumber = await generateInvoiceNumber(resolvedBranchId, activeBranch?.name ?? "STORE");
+      const invoiceNumber = await generateInvoiceNumber(resolvedBranchId, activeBranch?.name ?? "STORE", businessId || undefined);
 
       const newInvoice: Invoice = {
         id: invoiceId,
