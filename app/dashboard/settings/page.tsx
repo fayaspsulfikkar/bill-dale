@@ -419,23 +419,27 @@ function GeneralTab() {
           </div>
         </CardContent>
       </Card>
+      {/* Spacer so content doesn't hide behind the fixed bar */}
+      <div className="h-20" />
 
-      {/* ── Save Button ── */}
-      <div className="sticky bottom-4 z-10">
-        <Card className="bg-card/90 backdrop-blur-lg border-border/50 shadow-xl">
-          <CardContent className="py-3 flex items-center justify-between">
-            <div className="text-sm text-muted-foreground">
-              {saved ? (
-                <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-green-500 font-medium flex items-center gap-1">
-                  <Check className="w-4 h-4" /> All preferences saved!
-                </motion.span>
-              ) : "Changes are not saved until you click Save."}
-            </div>
-            <Button onClick={handleSave} disabled={saving} className="h-10 font-semibold px-8">
-              {saving ? "Saving..." : "Save All Preferences"}
-            </Button>
-          </CardContent>
-        </Card>
+      {/* ── Fixed Save Bar ── */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pointer-events-none">
+        <div className="max-w-4xl mx-auto pointer-events-auto">
+          <Card className="bg-card/95 backdrop-blur-xl border-border/60 shadow-[0_-4px_30px_rgba(0,0,0,0.12)]">
+            <CardContent className="py-3 flex items-center justify-between gap-4">
+              <div className="text-sm text-muted-foreground">
+                {saved ? (
+                  <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-green-500 font-medium flex items-center gap-1">
+                    <Check className="w-4 h-4" /> All preferences saved!
+                  </motion.span>
+                ) : "Unsaved changes — click Save to apply."}
+              </div>
+              <Button onClick={handleSave} disabled={saving} className="h-10 font-semibold px-8 shrink-0 shadow-md">
+                {saving ? "Saving..." : "Save All Preferences"}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
