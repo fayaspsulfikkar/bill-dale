@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -151,21 +151,6 @@ function ChipSelect<T extends string | number>({ value, options, onChange }: { v
 function GeneralTab() {
   const router = useRouter();
   const { businessId } = useAuthStore();
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [barStyle, setBarStyle] = useState<{ left: number; width: number } | null>(null);
-
-  // Track content column position for the fixed save bar
-  useEffect(() => {
-    const measure = () => {
-      if (contentRef.current) {
-        const rect = contentRef.current.getBoundingClientRect();
-        setBarStyle({ left: rect.left, width: rect.width });
-      }
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, []);
 
   const settings = useLiveQuery(
     () => businessId ? db.business_settings.where("business_id").equals(businessId).first() : undefined,
@@ -203,6 +188,8 @@ function GeneralTab() {
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isInitialLoad = useRef(true);
 
   useEffect(() => {
     if (settings) {
@@ -234,7 +221,8 @@ function GeneralTab() {
     }
   }, [settings]);
 
-  const handleSave = async () => {
+  // Auto-save with debounce whenever form changes
+  const doSave = useCallback(async (data: typeof form) => {
     if (!businessId) return;
     setSaving(true);
     try {
@@ -242,27 +230,39 @@ function GeneralTab() {
         id: settings?.id || crypto.randomUUID(),
         business_id: businessId,
         ...(settings || {}),
-        ...form,
+        ...data,
         updated_at: new Date().toISOString(),
       } as any;
       await db.business_settings.put(record);
       if (supabase) {
         await supabase.from("business_settings").upsert(record);
       }
-      // Invalidate currency cache so formatCurrency picks up new values
       const { invalidateCurrencyCache } = await import("@/lib/formatCurrency");
       invalidateCurrencyCache();
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      setTimeout(() => setSaved(false), 2000);
     } finally {
       setSaving(false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessId, settings?.id]);
+
+  useEffect(() => {
+    // Skip auto-save on initial form hydration from settings
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+      return;
+    }
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => doSave(form), 600);
+    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form]);
 
   const u = (patch: Partial<typeof form>) => setForm(prev => ({ ...prev, ...patch }));
 
   return (
-    <div ref={contentRef} className="space-y-6">
+    <div className="space-y-6 relative">
       <h2 className="text-lg font-semibold">General</h2>
 
       {/* ── Card 1: Business Profile ── */}
@@ -435,31 +435,30 @@ function GeneralTab() {
           </div>
         </CardContent>
       </Card>
-      {/* Spacer so content doesn't hide behind the fixed bar */}
-      <div className="h-20" />
 
-      {/* ── Fixed Save Bar — aligned with content column ── */}
-      <div
-        className="fixed bottom-0 z-50 pb-4 pointer-events-none"
-        style={barStyle ? { left: barStyle.left, width: barStyle.width } : { left: 0, right: 0 }}
-      >
-        <div className="pointer-events-auto">
-          <Card className="bg-card/95 backdrop-blur-xl border-border/60 shadow-[0_-4px_30px_rgba(0,0,0,0.12)]">
-            <CardContent className="py-3 flex items-center justify-between gap-4">
-              <div className="text-sm text-muted-foreground">
-                {saved ? (
-                  <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-green-500 font-medium flex items-center gap-1">
-                    <Check className="w-4 h-4" /> All preferences saved!
-                  </motion.span>
-                ) : "Unsaved changes — click Save to apply."}
-              </div>
-              <Button onClick={handleSave} disabled={saving} className="h-10 font-semibold px-8 shrink-0 shadow-md">
-                {saving ? "Saving..." : "Save All Preferences"}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      {/* ── Auto-save toast ── */}
+      <AnimatePresence>
+        {(saving || saved) && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="fixed bottom-6 right-6 z-50"
+          >
+            <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium shadow-lg backdrop-blur-xl border ${
+              saved
+                ? "bg-green-500/10 border-green-500/30 text-green-500"
+                : "bg-card/90 border-border/50 text-muted-foreground"
+            }`}>
+              {saved ? (
+                <><Check className="w-4 h-4" /> Saved</>
+              ) : (
+                <><div className="w-3.5 h-3.5 border-2 border-primary/40 border-t-primary rounded-full animate-spin" /> Saving...</>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
