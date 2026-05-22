@@ -1,6 +1,7 @@
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { NotificationBell } from "@/components/NotificationBell";
 import { BranchLoginModal } from "@/components/pos/BranchLoginModal";
+import { CurrencyRefreshBoundary } from "@/components/CurrencyRefreshBoundary";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -20,7 +21,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
         <main className="flex-1 p-8 overflow-y-auto print:p-0 print:overflow-visible">
           <div className="max-w-7xl mx-auto print:max-w-none print:mx-0">
-            {children}
+            <CurrencyRefreshBoundary>
+              {children}
+            </CurrencyRefreshBoundary>
           </div>
         </main>
       </div>

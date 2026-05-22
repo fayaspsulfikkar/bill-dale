@@ -17,7 +17,6 @@ let _cacheLoaded = false;
 async function loadCurrencyCache() {
   if (_cacheLoaded) return;
   try {
-    // Grab the first business_settings row available
     const settings = await db.business_settings.toCollection().first();
     if (settings?.currency_code) _currencyCode = settings.currency_code;
     if (settings?.decimal_places !== undefined) _decimalPlaces = settings.decimal_places;
@@ -27,9 +26,19 @@ async function loadCurrencyCache() {
   _cacheLoaded = true;
 }
 
-/** Call this when settings change so the formatter picks up new values */
-export function invalidateCurrencyCache() {
-  _cacheLoaded = false;
+/**
+ * Update the currency cache with new values and notify all listeners.
+ * Call this when settings change so the formatter + UI picks up new values.
+ */
+export function invalidateCurrencyCache(newCode?: string, newDecimals?: number) {
+  if (newCode !== undefined) _currencyCode = newCode;
+  if (newDecimals !== undefined) _decimalPlaces = newDecimals;
+  _cacheLoaded = true; // values are already set, no need to re-read from Dexie
+
+  // Dispatch event so React components can re-render
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('currency-changed'));
+  }
 }
 
 // Kick off cache load eagerly (non-blocking)

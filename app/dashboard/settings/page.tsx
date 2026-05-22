@@ -240,7 +240,7 @@ function GeneralTab() {
         await supabase.from("business_settings").upsert(record);
       }
       const { invalidateCurrencyCache } = await import("@/lib/formatCurrency");
-      invalidateCurrencyCache();
+      invalidateCurrencyCache(data.currency_code, data.decimal_places);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } finally {
