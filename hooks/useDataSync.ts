@@ -27,7 +27,7 @@ async function pushSyncQueue() {
       if (operation === "INSERT" || operation === "UPDATE") {
         const { error } = await client
           .from(table_name)
-          .upsert(data);
+          .upsert(data as any);
 
         if (error) {
           console.error(`[useDataSync] Failed to upsert to ${table_name}:`, error);
