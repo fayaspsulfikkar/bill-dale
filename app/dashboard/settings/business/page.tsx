@@ -22,30 +22,11 @@ export default function BusinessSettingsPage() {
   const [form, setForm] = useState({
     name: "", owner_name: "", mobile: "", email: "",
     gstin: "", pan: "", address: "", state: "", pincode: "",
-    invoice_prefix: "", bank_name: "", account_number: "", ifsc: "", upi_id: "",
+    bank_name: "", account_number: "", ifsc: "", upi_id: "",
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // PIN management
-  const [pinForm, setPinForm] = useState({ newPin: "", confirmPin: "" });
-  const [pinError, setPinError] = useState("");
-  const [pinSaved, setPinSaved] = useState(false);
-  const [savingPin, setSavingPin] = useState(false);
-
-  const handleSavePin = async () => {
-    if (pinForm.newPin.length < 4) { setPinError("PIN must be at least 4 digits."); return; }
-    if (pinForm.newPin !== pinForm.confirmPin) { setPinError("PINs do not match."); return; }
-    if (!businessId) return;
-    setPinError("");
-    setSavingPin(true);
-    await db.businesses.update(businessId, { admin_pin: pinForm.newPin } as never);
-    if (supabase) await supabase.from("businesses").update({ admin_pin: pinForm.newPin }).eq("id", businessId);
-    setSavingPin(false);
-    setPinSaved(true);
-    setPinForm({ newPin: "", confirmPin: "" });
-    setTimeout(() => setPinSaved(false), 3000);
-  };
 
   useEffect(() => {
     if (business) setForm({ ...form, ...business });
@@ -97,10 +78,9 @@ export default function BusinessSettingsPage() {
             <CardContent className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5"><Label>GSTIN</Label><Input {...f("gstin")} placeholder="22AAAAA0000A1Z5" className="bg-background/50 font-mono text-sm" /></div>
               <div className="space-y-1.5"><Label>PAN</Label><Input {...f("pan")} placeholder="AAAAA0000A" className="bg-background/50 font-mono text-sm" /></div>
-              <div className="space-y-1.5"><Label>Invoice Prefix</Label><Input {...f("invoice_prefix")} placeholder="INV" className="bg-background/50 font-mono" /></div>
               <div className="space-y-1.5"><Label>Pincode</Label><Input {...f("pincode")} placeholder="600001" /></div>
+              <div className="space-y-1.5"><Label>State</Label><Input {...f("state")} placeholder="Tamil Nadu" /></div>
               <div className="space-y-1.5 col-span-2"><Label>Address</Label><Input {...f("address")} placeholder="Full address" /></div>
-              <div className="space-y-1.5 col-span-2"><Label>State</Label><Input {...f("state")} placeholder="Tamil Nadu" /></div>
             </CardContent>
           </Card>
 
@@ -114,48 +94,6 @@ export default function BusinessSettingsPage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-card/50 border-border/50">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">🔐 Staff Mode PIN</CardTitle>
-              <CardDescription>
-                This PIN is required to exit Staff Mode or access locked sections.
-                Must be 4–8 digits. Keep it private.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>New PIN (4–8 digits)</Label>
-                <Input
-                  type="password"
-                  inputMode="numeric"
-                  maxLength={8}
-                  value={pinForm.newPin}
-                  onChange={(e) => setPinForm({ ...pinForm, newPin: e.target.value.replace(/\D/g, "") })}
-                  placeholder="••••"
-                  className="bg-background/50 font-mono tracking-widest text-center"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Confirm PIN</Label>
-                <Input
-                  type="password"
-                  inputMode="numeric"
-                  maxLength={8}
-                  value={pinForm.confirmPin}
-                  onChange={(e) => setPinForm({ ...pinForm, confirmPin: e.target.value.replace(/\D/g, "") })}
-                  placeholder="••••"
-                  className="bg-background/50 font-mono tracking-widest text-center"
-                />
-              </div>
-              {pinError && <p className="col-span-2 text-destructive text-xs">{pinError}</p>}
-              {pinSaved && <p className="col-span-2 text-green-400 text-xs">✅ PIN updated successfully!</p>}
-              <div className="col-span-2">
-                <Button type="button" variant="outline" onClick={handleSavePin} disabled={savingPin} className="w-full max-w-xs">
-                  {savingPin ? "Saving…" : "Set / Update PIN"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
 
           <Button type="submit" disabled={saving} className="w-full max-w-xs h-11 font-semibold">
             {saving ? "Saving..." : saved ? "✅ Saved!" : "Save Changes"}
