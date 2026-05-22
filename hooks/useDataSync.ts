@@ -10,9 +10,67 @@ const SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 let syncedThisSession = false;
 
+async function pushSyncQueue() {
+  const client = supabase;
+  if (!client) return;
+
+  const queueItems = await db.sync_queue.toArray();
+  if (queueItems.length === 0) return;
+
+  console.log(`[useDataSync] Found ${queueItems.length} items in sync queue. Starting upload...`);
+
+  for (const item of queueItems) {
+    try {
+      let success = false;
+      const { table_name, operation, data } = item;
+
+      if (operation === "INSERT" || operation === "UPDATE") {
+        const { error } = await client
+          .from(table_name)
+          .upsert(data);
+
+        if (error) {
+          console.error(`[useDataSync] Failed to upsert to ${table_name}:`, error);
+        } else {
+          success = true;
+        }
+      } else if (operation === "DELETE") {
+        const id = (data as any)?.id;
+        if (id) {
+          const { error } = await client
+            .from(table_name)
+            .delete()
+            .eq("id", id);
+
+          if (error) {
+            console.error(`[useDataSync] Failed to delete from ${table_name}:`, error);
+          } else {
+            success = true;
+          }
+        } else {
+          success = true; // Mark as processed to remove corrupt/invalid item from local queue
+        }
+      }
+
+      if (success && item.id !== undefined) {
+        await db.sync_queue.delete(item.id);
+      }
+    } catch (err) {
+      console.error(`[useDataSync] Error processing queue item ${item.id}:`, err);
+    }
+  }
+}
+
 async function runSync(businessId: string) {
   const client = supabase;
   if (!client) return;
+
+  // Push local changes to Supabase first
+  try {
+    await pushSyncQueue();
+  } catch (pushErr) {
+    console.error("[useDataSync] Failed to push local changes to Supabase:", pushErr);
+  }
 
   // Sync branches
   const { data: branches } = await client
