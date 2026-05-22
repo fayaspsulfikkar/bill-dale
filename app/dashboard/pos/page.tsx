@@ -32,6 +32,9 @@ import { generateInvoiceNumber } from "@/lib/invoiceNumber";
 import { formatINR } from "@/lib/formatCurrency";
 import { useDataSync } from "@/hooks/useDataSync";
 import { useCurrencyVersion } from "@/components/CurrencyRefreshBoundary";
+import { useDeviceStore } from "@/store/deviceStore";
+import { initScannerDetector } from "@/lib/devices/scannerDetector";
+import { generateEscPosReceipt, writeRaw } from "@/lib/devices/thermalPrinter";
 
 
 export default function POSPage() {
@@ -56,6 +59,8 @@ export default function POSPage() {
     changeDue?: number;
   } | null>(null);
   const [printMode, setPrintMode] = useState<"thermal" | "a4" | null>(null);
+
+  const { scanner, thermal, a4 } = useDeviceStore();
 
   useEffect(() => {
     if (printMode !== null) {
@@ -94,6 +99,28 @@ export default function POSPage() {
     () => businessId ? db.staff_members.where("business_id").equals(businessId).and(s => s.is_active).toArray() : [],
     [businessId]
   ) || [];
+
+  // Background keyboard wedge scanner detector
+  useEffect(() => {
+    if (scanner.scanner_mode === 'keyboard') {
+      const removeListener = initScannerDetector((barcode) => {
+        setScanError(false);
+        const match = allProducts.find(p => p.sku.toLowerCase() === barcode.trim().toLowerCase());
+        if (match) {
+          addItem(match, 1);
+        } else {
+          setScanError(true);
+          setTimeout(() => setScanError(false), 2500);
+        }
+      }, {
+        scanner_suffix: scanner.scanner_suffix,
+        scanner_min_speed_ms: scanner.scanner_min_speed_ms,
+        scanner_prefix: scanner.scanner_prefix,
+      });
+      return removeListener;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scanner, allProducts]);
 
   // Sync default payment method from settings
   useEffect(() => {
@@ -295,7 +322,26 @@ export default function POSPage() {
       });
 
       setIsCheckoutOpen(false);
-      // We do NOT clear cart or reset payment method here yet. We do it when they close the success modal.
+
+      // Trigger automatic print logic if configured
+      if (thermal.thermal_enabled && thermal.thermal_auto_print) {
+        if (thermal.thermal_connection === 'serial') {
+          try {
+            const receiptBytes = generateEscPosReceipt(newInvoice, [...items], settings, {
+              amountTendered: typeof amountTendered === 'number' ? amountTendered : undefined,
+              changeDue: paymentMethod === 'cash' && typeof amountTendered === 'number' ? amountTendered - total : undefined,
+              businessName: business?.name
+            });
+            await writeRaw(receiptBytes);
+          } catch (e) {
+            console.error("Direct auto-print failed:", e);
+          }
+        } else {
+          setPrintMode('thermal');
+        }
+      } else if (a4.a4_enabled && a4.a4_auto_print) {
+        setPrintMode('a4');
+      }
     } catch (err) {
       console.error(err);
       alert("Transaction failed. Check console.");
@@ -854,10 +900,25 @@ export default function POSPage() {
             <Button 
               variant="outline" 
               className="h-14 justify-start px-6 font-bold text-base hover:bg-primary/5 hover:text-primary hover:border-primary/50 transition-all"
-              onClick={() => setPrintMode('thermal')}
+              onClick={async () => {
+                if (completedTransaction && thermal.thermal_enabled && thermal.thermal_connection === 'serial') {
+                  try {
+                    const receiptBytes = generateEscPosReceipt(completedTransaction.invoice, completedTransaction.items, settings, {
+                      amountTendered: completedTransaction.amountTendered,
+                      changeDue: completedTransaction.changeDue,
+                      businessName: business?.name
+                    });
+                    await writeRaw(receiptBytes);
+                  } catch (err) {
+                    alert("Direct serial printing failed. Try browser printing instead.");
+                  }
+                } else {
+                  setPrintMode('thermal');
+                }
+              }}
             >
               <Receipt className="w-5 h-5 mr-3 opacity-70" />
-              Print Thermal Receipt
+              Print Thermal Receipt {thermal.thermal_enabled && thermal.thermal_connection === 'serial' ? '(Direct)' : ''}
             </Button>
             <Button 
               variant="outline" 

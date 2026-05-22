@@ -14,7 +14,7 @@ import { useThemeStore } from "@/store/themeStore";
 import { usePOSStore } from "@/store/posStore";
 import { signOut } from "@/lib/auth";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import db from "@/offline/db";
 import { AdminPinDialog } from "@/components/AdminPinDialog";
@@ -41,6 +41,7 @@ export function DashboardSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, businessId, businessName, staffMode, staffModeUnlockUntil, setStaffMode, clearSession } = useAuthStore();
+  const [isPending, startTransition] = useTransition();
   const { theme, setTheme } = useThemeStore();
   const [bizOpen, setBizOpen] = useState(false);
   const [pinTarget, setPinTarget] = useState<string | null>(null); // href to navigate after PIN
@@ -118,7 +119,9 @@ export function DashboardSidebar() {
     if (staffMode && item.staffLocked) {
       setPinTarget(item.href);
     } else {
-      router.push(item.href);
+      startTransition(() => {
+        router.push(item.href);
+      });
     }
   };
 
@@ -256,9 +259,10 @@ export function DashboardSidebar() {
           }
 
           return (
-            <button
+            <Link
               key={item.href}
-              onClick={() => handleNavClick(item)}
+              href={item.href}
+              prefetch={true}
               className={cn(
                 "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all relative group text-sm",
                 isActive ? "text-primary" : "text-muted-foreground hover:text-foreground hover:bg-white/5"
@@ -274,7 +278,7 @@ export function DashboardSidebar() {
               )}
               <item.icon className={cn("w-4 h-4 relative z-10 shrink-0", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground transition-colors")} />
               <span className="font-medium relative z-10">{item.name}</span>
-            </button>
+            </Link>
           );
         })}
       </nav>

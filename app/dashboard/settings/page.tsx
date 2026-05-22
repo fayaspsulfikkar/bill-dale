@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import {
   Store, Shield, ChevronRight, Eye, EyeOff, Receipt, Database,
   Settings2, Cloud, CloudOff, RefreshCw, Trash2, HardDrive, Clock,
-  Upload, FileText, Loader2, Check, AlertTriangle,
+  Upload, FileText, Loader2, Check, AlertTriangle, Monitor,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
@@ -18,13 +18,15 @@ import db from "@/offline/db";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDataSync } from "@/hooks/useDataSync";
 import { formatDistanceToNow } from "date-fns";
+import DevicesTab from "@/components/settings/DevicesTab";
 
-type SettingsTab = "general" | "security" | "receipts" | "sync";
+type SettingsTab = "general" | "security" | "receipts" | "devices" | "sync";
 
 const TABS: { id: SettingsTab; label: string; icon: typeof Settings2 }[] = [
   { id: "general", label: "General", icon: Store },
   { id: "security", label: "Security", icon: Shield },
   { id: "receipts", label: "Receipts", icon: Receipt },
+  { id: "devices", label: "Devices", icon: Monitor },
   { id: "sync", label: "Data & Sync", icon: Database },
 ];
 
@@ -76,6 +78,7 @@ export default function SettingsPage() {
               {activeTab === "general" && <GeneralTab />}
               {activeTab === "security" && <SecurityTab />}
               {activeTab === "receipts" && <ReceiptsTab />}
+              {activeTab === "devices" && <DevicesTab />}
               {activeTab === "sync" && <SyncTab />}
             </motion.div>
           </AnimatePresence>
