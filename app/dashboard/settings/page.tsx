@@ -151,6 +151,22 @@ function ChipSelect<T extends string | number>({ value, options, onChange }: { v
 function GeneralTab() {
   const router = useRouter();
   const { businessId } = useAuthStore();
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [barStyle, setBarStyle] = useState<{ left: number; width: number } | null>(null);
+
+  // Track content column position for the fixed save bar
+  useEffect(() => {
+    const measure = () => {
+      if (contentRef.current) {
+        const rect = contentRef.current.getBoundingClientRect();
+        setBarStyle({ left: rect.left, width: rect.width });
+      }
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, []);
+
   const settings = useLiveQuery(
     () => businessId ? db.business_settings.where("business_id").equals(businessId).first() : undefined,
     [businessId]
@@ -246,7 +262,7 @@ function GeneralTab() {
   const u = (patch: Partial<typeof form>) => setForm(prev => ({ ...prev, ...patch }));
 
   return (
-    <div className="space-y-6">
+    <div ref={contentRef} className="space-y-6">
       <h2 className="text-lg font-semibold">General</h2>
 
       {/* ── Card 1: Business Profile ── */}
@@ -422,9 +438,12 @@ function GeneralTab() {
       {/* Spacer so content doesn't hide behind the fixed bar */}
       <div className="h-20" />
 
-      {/* ── Fixed Save Bar ── */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pointer-events-none">
-        <div className="max-w-4xl mx-auto pointer-events-auto">
+      {/* ── Fixed Save Bar — aligned with content column ── */}
+      <div
+        className="fixed bottom-0 z-50 pb-4 pointer-events-none"
+        style={barStyle ? { left: barStyle.left, width: barStyle.width } : { left: 0, right: 0 }}
+      >
+        <div className="pointer-events-auto">
           <Card className="bg-card/95 backdrop-blur-xl border-border/60 shadow-[0_-4px_30px_rgba(0,0,0,0.12)]">
             <CardContent className="py-3 flex items-center justify-between gap-4">
               <div className="text-sm text-muted-foreground">
