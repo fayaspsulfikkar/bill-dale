@@ -1,11 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, createContext, useContext } from "react";
 
 /**
- * Wrapper that forces re-render of all children when currency settings change.
- * Listens for the 'currency-changed' custom event dispatched by invalidateCurrencyCache().
+ * Provides a reactive version counter that bumps when currency format changes.
+ * Page-level components call useCurrencyVersion() to subscribe and re-render.
  */
+const CurrencyCtx = createContext(0);
+
+export function useCurrencyVersion(): number {
+  return useContext(CurrencyCtx);
+}
+
 export function CurrencyRefreshBoundary({ children }: { children: React.ReactNode }) {
   const [version, setVersion] = useState(0);
 
@@ -15,6 +21,9 @@ export function CurrencyRefreshBoundary({ children }: { children: React.ReactNod
     return () => window.removeEventListener('currency-changed', handler);
   }, []);
 
-  // The key change forces React to remount all children, picking up new formatCurrency values
-  return <div key={version}>{children}</div>;
+  return (
+    <CurrencyCtx.Provider value={version}>
+      {children}
+    </CurrencyCtx.Provider>
+  );
 }

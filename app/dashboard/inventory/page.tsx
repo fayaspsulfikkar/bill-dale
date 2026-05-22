@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/lib/utils";
 import { formatINR } from "@/lib/formatCurrency";
 import { Plus, Search, AlertCircle, Building2, Pencil, Check, X, Trash2, PlusCircle, ChevronDown } from "lucide-react";
+import { useCurrencyVersion } from "@/components/CurrencyRefreshBoundary";
 
 interface SizeVariant { id: string; size: string; sku: string; stockPerBranch: Record<string, string>; }
 interface FormState { name: string; category: string; brand: string; color: string; price: string; gst_percent: string; price_includes_gst: boolean; variants: SizeVariant[]; }
@@ -33,6 +34,7 @@ function StockCell({ stock, isSelected, onEdit }: { stock: number; isSelected: b
 }
 
 export default function InventoryPage() {
+  useCurrencyVersion();
   const { user, role } = useAuthStore();
   const products = useLiveQuery(() => db.products.toArray()) ?? [];
   const inventory = useLiveQuery(() => db.inventory.toArray()) ?? [];

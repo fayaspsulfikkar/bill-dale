@@ -31,9 +31,11 @@ import { TaxBreakdown } from "@/components/pos/TaxBreakdown";
 import { generateInvoiceNumber } from "@/lib/invoiceNumber";
 import { formatINR } from "@/lib/formatCurrency";
 import { useDataSync } from "@/hooks/useDataSync";
+import { useCurrencyVersion } from "@/components/CurrencyRefreshBoundary";
 
 
 export default function POSPage() {
+  useCurrencyVersion(); // re-render on currency format change
   const [searchQuery, setSearchQuery] = useState("");
   const [scanError, setScanError] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "upi" | "split">("card");

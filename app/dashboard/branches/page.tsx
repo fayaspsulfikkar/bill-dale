@@ -15,6 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MapPin, Plus, Search, MoreVertical, Building2, TrendingUp, Users, AlertTriangle, Eye, Pencil, PowerOff, Archive, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { useCurrencyVersion } from "@/components/CurrencyRefreshBoundary";
 
 const STATUS_COLORS: Record<string, string> = {
   active: "bg-green-500/15 text-green-600 border-green-500/30",
@@ -25,6 +26,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function BranchesPage() {
+  useCurrencyVersion();
   const router = useRouter();
   
   // Data

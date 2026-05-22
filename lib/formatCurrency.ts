@@ -27,16 +27,20 @@ async function loadCurrencyCache() {
 }
 
 /**
- * Update the currency cache with new values and notify all listeners.
- * Call this when settings change so the formatter + UI picks up new values.
+ * Update the currency cache with new values and notify listeners.
+ * Only dispatches a re-render event if the values actually changed.
  */
 export function invalidateCurrencyCache(newCode?: string, newDecimals?: number) {
+  const changed =
+    (newCode !== undefined && newCode !== _currencyCode) ||
+    (newDecimals !== undefined && newDecimals !== _decimalPlaces);
+
   if (newCode !== undefined) _currencyCode = newCode;
   if (newDecimals !== undefined) _decimalPlaces = newDecimals;
-  _cacheLoaded = true; // values are already set, no need to re-read from Dexie
+  _cacheLoaded = true;
 
-  // Dispatch event so React components can re-render
-  if (typeof window !== 'undefined') {
+  // Only fire event if something actually changed
+  if (changed && typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('currency-changed'));
   }
 }

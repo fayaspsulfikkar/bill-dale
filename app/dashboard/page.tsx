@@ -22,8 +22,10 @@ import { DashboardInsights } from "@/components/dashboard/DashboardInsights";
 import { exportPDF, exportCSV } from "@/lib/exportDashboard";
 import { parseISO, subDays, differenceInDays, startOfDay, endOfDay } from "date-fns";
 import { Download, FileText, FileSpreadsheet, Loader2 } from "lucide-react";
+import { useCurrencyVersion } from "@/components/CurrencyRefreshBoundary";
 
 export default function DashboardOverview() {
+  useCurrencyVersion(); // re-render on currency format change
   const { selectedBranchId } = usePOSStore();
   const { businessId, role, staffMode } = useAuthStore();
   const [filterBranchId, setFilterBranchId] = useState<string | "all">(selectedBranchId || "all");
