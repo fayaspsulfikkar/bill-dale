@@ -189,10 +189,12 @@ function GeneralTab() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isInitialLoad = useRef(true);
+  const isHydrating = useRef(true); // true = form update came from settings, not user
 
   useEffect(() => {
     if (settings) {
+      // Mark as hydrating so auto-save skips this form update
+      isHydrating.current = true;
       setForm(prev => ({
         ...prev,
         currency_code: settings.currency_code || prev.currency_code,
@@ -248,9 +250,9 @@ function GeneralTab() {
   }, [businessId, settings?.id]);
 
   useEffect(() => {
-    // Skip auto-save on initial form hydration from settings
-    if (isInitialLoad.current) {
-      isInitialLoad.current = false;
+    // Skip when form was updated by settings hydration (not user action)
+    if (isHydrating.current) {
+      isHydrating.current = false;
       return;
     }
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -259,7 +261,11 @@ function GeneralTab() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form]);
 
-  const u = (patch: Partial<typeof form>) => setForm(prev => ({ ...prev, ...patch }));
+  // User-initiated change helper — clears the hydration flag
+  const u = (patch: Partial<typeof form>) => {
+    isHydrating.current = false;
+    setForm(prev => ({ ...prev, ...patch }));
+  };
 
   return (
     <div className="space-y-6 relative">
