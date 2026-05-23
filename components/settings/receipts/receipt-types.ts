@@ -36,6 +36,7 @@ export interface ReceiptContent {
   receipt_seasonal_msg?: string;
   receipt_return_policy?: string;
   receipt_exchange_policy?: string;
+  receipt_language?: string; // Phase 3.3
 }
 
 /* ── Section 3: Branding & Visuals ── */
@@ -54,6 +55,7 @@ export interface ReceiptBranding {
   receipt_social_youtube?: string;
   receipt_show_social_qr?: boolean;
   receipt_brand_color?: string;  // hex color for preview accent
+  receipt_qr_payload?: 'invoice_link' | 'upi_payment' | 'none'; // Phase 3.3
 }
 
 /* ── Section 4: Layout Settings ── */
@@ -149,7 +151,9 @@ export interface ReceiptSettingsSnapshot extends
   ReceiptDigitalOptions {}
 
 /* ── Merged type for BusinessSettings extension ── */
-export interface ReceiptSettingsFields extends ReceiptSettingsSnapshot {}
+export interface ReceiptSettingsFields extends ReceiptSettingsSnapshot {
+  receipt_visual_editor_enabled?: boolean; // Phase 3.3
+}
 
 /* ── Dynamic Placeholders ── */
 export type ReceiptPlaceholder =

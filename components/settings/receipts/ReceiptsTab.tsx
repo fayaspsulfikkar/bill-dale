@@ -63,8 +63,23 @@ export default function ReceiptsTab() {
           <h2 className="text-xl font-bold tracking-tight">Receipt Customization</h2>
           <p className="text-sm text-muted-foreground">Configure how your printed and digital receipts look.</p>
         </div>
-        <button
-          onClick={() => setShowPreview(!showPreview)}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => u({ receipt_visual_editor_enabled: !form.receipt_visual_editor_enabled })}
+            className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border transition-all shadow-sm ${
+              form.receipt_visual_editor_enabled
+                ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-500"
+                : "bg-muted/30 border-border text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            }`}
+          >
+            <div className={`relative w-6 h-3.5 rounded-full transition-colors shrink-0 ${form.receipt_visual_editor_enabled ? "bg-indigo-500" : "bg-muted-foreground/30"}`}>
+              <div className={`absolute top-[2px] left-[2px] w-2.5 h-2.5 bg-white rounded-full transition-transform shadow-sm ${form.receipt_visual_editor_enabled ? "translate-x-2.5" : ""}`} />
+            </div>
+            Visual Editor
+          </button>
+          
+          <button
+            onClick={() => setShowPreview(!showPreview)}
           className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all shadow-sm ${
             showPreview
               ? "bg-primary/10 border-primary text-primary"
@@ -73,7 +88,8 @@ export default function ReceiptsTab() {
         >
           <Eye className="w-3.5 h-3.5" />
           {showPreview ? "Hide Preview" : "Show Preview"}
-        </button>
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-6">

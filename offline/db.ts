@@ -446,6 +446,11 @@ export interface BusinessSettings {
   receipt_thermal_optimization?: boolean;
   receipt_ink_saving?: boolean;
   receipt_dark_mode?: boolean;
+
+  // Enterprise Receipt Features (Phase 3.3)
+  receipt_qr_payload?: 'invoice_link' | 'upi_payment' | 'none';
+  receipt_language?: string;
+  receipt_visual_editor_enabled?: boolean;
   // Digital Receipts
   receipt_sms_enabled?: boolean;
   receipt_email_enabled?: boolean;

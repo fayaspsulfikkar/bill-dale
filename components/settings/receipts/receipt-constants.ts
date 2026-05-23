@@ -40,6 +40,7 @@ export const RECEIPT_DEFAULTS: ReceiptSettingsSnapshot = {
   receipt_seasonal_msg: '',
   receipt_return_policy: '',
   receipt_exchange_policy: '',
+  receipt_language: 'en',
 
   // Branding
   receipt_logo_url: '',
@@ -54,6 +55,7 @@ export const RECEIPT_DEFAULTS: ReceiptSettingsSnapshot = {
   receipt_social_youtube: '',
   receipt_show_social_qr: false,
   receipt_brand_color: '#000000',
+  receipt_qr_payload: 'none',
 
   // Layout
   receipt_paper_size: '80mm',
@@ -106,6 +108,7 @@ export const RECEIPT_DEFAULTS: ReceiptSettingsSnapshot = {
   receipt_email_subject: 'Your receipt from {store_name}',
   receipt_sms_template: 'Thank you for shopping at {store_name}! Invoice #{invoice_id}, Total: {total_amount}',
   receipt_whatsapp_template: 'Hi {customer_name}! Here\'s your receipt from {store_name}. Invoice #{invoice_id}, Total: {total_amount}. Thank you!',
+  receipt_visual_editor_enabled: false,
 };
 
 // ─── Placeholder Definitions ──────────────────────────────────────

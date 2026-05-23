@@ -66,6 +66,23 @@ export default function ContentSection({ form, u }: Props) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
+          {/* Language Selection */}
+          <div className="space-y-1.5 pb-4 border-b border-border/50">
+            <Label className="text-sm font-medium">Receipt Language</Label>
+            <p className="text-xs text-muted-foreground mb-2">Select the language for static receipt labels (Total, Tax, etc.).</p>
+            <select
+              value={form.receipt_language || 'en'}
+              onChange={(e) => u({ receipt_language: e.target.value })}
+              className="w-full max-w-xs h-10 px-3 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              <option value="en">English (US)</option>
+              <option value="hi">Hindi (India)</option>
+              <option value="ar">Arabic</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+            </select>
+          </div>
+
           {/* Placeholder Reference */}
           <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground mb-2">

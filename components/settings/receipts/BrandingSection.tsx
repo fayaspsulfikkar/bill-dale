@@ -257,17 +257,42 @@ export default function BrandingSection({ form, u }: Props) {
           {form.receipt_show_qr && (
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <Label className="text-sm">QR Data (URL or text)</Label>
-                <Input
-                  value={form.receipt_qr_data || ""}
-                  onChange={(e) => u({ receipt_qr_data: e.target.value })}
-                  placeholder="https://mystore.com/feedback"
-                  className="bg-background/50"
+                <Label className="text-sm">QR Code Payload Type</Label>
+                <ChipSelect
+                  value={form.receipt_qr_payload || "none"}
+                  options={[
+                    { label: "Digital Invoice Link", value: "invoice_link" },
+                    { label: "UPI Payment QR", value: "upi_payment" },
+                    { label: "Custom Static URL", value: "none" }
+                  ]}
+                  onChange={(v) => u({ receipt_qr_payload: v as any })}
                 />
               </div>
-              {qrPreview && (
-                <div className="flex justify-center">
+              
+              {(!form.receipt_qr_payload || form.receipt_qr_payload === "none") && (
+                <div className="space-y-1.5 pt-2">
+                  <Label className="text-sm">Custom QR URL</Label>
+                  <Input
+                    value={form.receipt_qr_data || ""}
+                    onChange={(e) => u({ receipt_qr_data: e.target.value })}
+                    placeholder="https://mystore.com/feedback"
+                    className="bg-background/50"
+                  />
+                </div>
+              )}
+              {qrPreview && (!form.receipt_qr_payload || form.receipt_qr_payload === "none") && (
+                <div className="flex justify-center pt-2">
                   <img src={qrPreview} alt="QR Preview" className="w-24 h-24 border border-border rounded-lg" />
+                </div>
+              )}
+              {form.receipt_qr_payload === "invoice_link" && (
+                <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg text-xs text-primary">
+                  The QR code will automatically link to the digital version of the customer's specific invoice.
+                </div>
+              )}
+              {form.receipt_qr_payload === "upi_payment" && (
+                <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-xs text-green-500">
+                  The QR code will contain UPI payment details based on the total invoice amount.
                 </div>
               )}
             </div>
