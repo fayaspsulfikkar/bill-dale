@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { format } from "date-fns";
 import type { ReceiptSettingsSnapshot, DividerStyle } from "./receipt-types";
 import { MOCK_ITEMS, MOCK_INVOICE, MOCK_CUSTOMER, MOCK_PAYMENT } from "./receipt-constants";
+import { PrintA4Invoice } from "@/components/pos/PrintA4Invoice";
 
 interface Props {
   form: ReceiptSettingsSnapshot;
@@ -55,6 +56,38 @@ export default function ReceiptPreview({ form }: Props) {
 
   const dateStr = format(new Date(MOCK_INVOICE.created_at), "dd/MM/yyyy");
   const timeStr = format(new Date(MOCK_INVOICE.created_at), "HH:mm:ss");
+
+  if (form.receipt_paper_size === "A4") {
+    return (
+      <div className="flex flex-col items-center pb-4">
+        <div className="text-[10px] text-muted-foreground mb-3 font-mono bg-muted/50 px-2 py-0.5 rounded">
+          A4 Preview (Scaled 40%)
+        </div>
+        
+        {/* Container matches the scaled height to avoid huge blank scroll space */}
+        <div className="relative bg-white shadow-xl border border-border/50 overflow-hidden" style={{ width: "320px", height: "450px" }}>
+          <div style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "794px", // 210mm at 96dpi
+            transform: "scale(0.403)", // 320 / 794
+            transformOrigin: "top left",
+            pointerEvents: "none",
+          }}>
+            <PrintA4Invoice
+              invoice={{ ...MOCK_INVOICE, customer_id: 'walk-in' } as any}
+              items={MOCK_ITEMS.map(i => ({ product: i, quantity: i.qty })) as any}
+              amountTendered={MOCK_PAYMENT.amount_tendered}
+              changeDue={MOCK_PAYMENT.change_due}
+              businessName={form.receipt_store_name || "YOUR STORE NAME"}
+              settings={form}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center">

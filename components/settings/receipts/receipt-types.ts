@@ -62,7 +62,7 @@ export type LayoutMode = 'compact' | 'detailed';
 export type TextAlignment = 'left' | 'center';
 
 export interface ReceiptLayout {
-  receipt_paper_size?: '80mm' | '58mm';  // already exists
+  receipt_paper_size?: '80mm' | '58mm' | 'A4';  // A4 added for document invoices
   receipt_font_size?: number;    // pt, 7-12
   receipt_layout_mode?: LayoutMode;
   receipt_margin_top?: number;   // mm

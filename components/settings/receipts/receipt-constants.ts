@@ -161,9 +161,10 @@ export const LINE_SPACING_OPTIONS: { label: string; value: number }[] = [
   { label: 'Loose (2.0)', value: 2.0 },
 ];
 
-export const PAPER_SIZE_OPTIONS: { label: string; value: '80mm' | '58mm' }[] = [
+export const PAPER_SIZE_OPTIONS: { label: string; value: '80mm' | '58mm' | 'A4' }[] = [
   { label: '80mm', value: '80mm' },
   { label: '58mm', value: '58mm' },
+  { label: 'A4 Page', value: 'A4' },
 ];
 
 export const COPY_OPTIONS: { label: string; value: number }[] = [

@@ -966,6 +966,7 @@ export default function POSPage() {
             amountTendered={completedTransaction.amountTendered}
             changeDue={completedTransaction.changeDue}
             businessName={business?.name}
+            settings={settings}
           />
         )}
       </div>

@@ -74,8 +74,8 @@ export default function LayoutSection({ form, u }: Props) {
               options={PAPER_SIZE_OPTIONS}
               onChange={(v) => u({ receipt_paper_size: v })}
             />
-            <p className="text-[10px] text-muted-foreground">
-              80mm is standard for most thermal printers. 58mm is compact/portable.
+            <p className="text-[10px] text-muted-foreground mt-2">
+              80mm is standard for thermal printers. 58mm is compact. A4 is for standard document printers.
             </p>
           </div>
 
