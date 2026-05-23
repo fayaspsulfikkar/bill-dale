@@ -9,7 +9,9 @@ import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
 import db from "@/offline/db";
 import { motion, AnimatePresence } from "framer-motion";
+import { format } from "date-fns";
 import { ALL_ROLES, ROLE_PRESETS, type POSAction } from "@/lib/permissions";
+import { logActivity } from "@/lib/activityLogger";
 import { PIN_ACTIONS, SAMPLE_LOGS, LOCK_TIMEOUTS, FAILED_ATTEMPT_OPTIONS, COOLDOWN_OPTIONS } from "./security-constants";
 
 function ToggleRow({ label, desc, value, onChange }: { label: string; desc: string; value: boolean; onChange: () => void }) {
@@ -47,7 +49,7 @@ function ChipSelect<T extends string | number>({ value, options, onChange }: { v
 }
 
 export default function SecurityTab() {
-  const { businessId } = useAuthStore();
+  const { businessId, user } = useAuthStore();
   
   // Settings DB State
   const settings = useLiveQuery(
@@ -60,6 +62,19 @@ export default function SecurityTab() {
     () => businessId ? db.businesses.get(businessId) : undefined,
     [businessId]
   );
+  
+  // Audit Logs State
+  const auditLogs = useLiveQuery(async () => {
+    if (!businessId) return [];
+    const logs = await db.activity_logs.where("business_id").equals(businessId).toArray();
+    return logs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 50);
+  }, [businessId]) || [];
+
+  const users = useLiveQuery(() => db.users.toArray()) || [];
+  const userMap = users.reduce((acc, u) => {
+    acc[u.id] = u.name || u.email || "Unknown User";
+    return acc;
+  }, {} as Record<string, string>);
   
   // Pin Auth State
   const hasPin = !!business?.admin_pin;
@@ -146,6 +161,7 @@ export default function SecurityTab() {
       if (supabase) {
         await supabase.from("businesses").update({ admin_pin: value }).eq("id", businessId);
       }
+      if (user?.id) logActivity(businessId, user.id, "Staff Mode PIN updated", { message: "Admin changed the global staff PIN." });
       setPinSaved(true);
       resetAll();
       setTimeout(() => setPinSaved(false), 3000);
@@ -169,6 +185,7 @@ export default function SecurityTab() {
       if (supabase) {
         await supabase.from("business_settings").upsert(record);
       }
+      if (user?.id) logActivity(businessId, user.id, "Security settings updated", { message: "Modified settings or role permissions." });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } finally {
@@ -203,6 +220,7 @@ export default function SecurityTab() {
         if (digits === business?.admin_pin) {
           setStep("enter"); setNewPin("");
         } else {
+          if (user?.id) logActivity(businessId, user.id, "Failed PIN attempt", { message: "Incorrect Staff Mode PIN entered." });
           setPinError("Incorrect current PIN"); setCurrentPin(""); triggerShake(); focusInput();
         }
       }
@@ -509,17 +527,26 @@ export default function SecurityTab() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
-              {SAMPLE_LOGS.map((log, idx) => (
-                <tr key={idx} className="hover:bg-muted/10 transition-colors">
-                  <td className="px-4 py-3 text-muted-foreground whitespace-nowrap"><Clock className="inline w-3 h-3 mr-1" />{log.time.split(' ')[1]}<br/><span className="text-[10px]">{log.time.split(' ')[0]}</span></td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <p className="font-medium text-foreground"><User className="inline w-3 h-3 mr-1" />{log.user}</p>
-                    <p className="text-[10px] text-muted-foreground"><Monitor className="inline w-3 h-3 mr-1" />{log.device}</p>
-                  </td>
-                  <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap">{log.action}</td>
-                  <td className="px-4 py-3 text-muted-foreground"><Hash className="inline w-3 h-3 mr-1" />{log.details}</td>
-                </tr>
-              ))}
+              {auditLogs.length === 0 && (
+                <tr><td colSpan={4} className="text-center py-8 text-muted-foreground text-sm">No security events logged yet.</td></tr>
+              )}
+              {auditLogs.map((log) => {
+                const date = new Date(log.created_at);
+                return (
+                  <tr key={log.id} className="hover:bg-muted/10 transition-colors">
+                    <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                      <Clock className="inline w-3 h-3 mr-1" />{format(date, "HH:mm")}<br/>
+                      <span className="text-[10px]">{format(date, "yyyy-MM-dd")}</span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <p className="font-medium text-foreground"><User className="inline w-3 h-3 mr-1" />{userMap[log.user_id] || "System"}</p>
+                      <p className="text-[10px] text-muted-foreground"><Monitor className="inline w-3 h-3 mr-1" />{String(log.details?.device || "Registered Device")}</p>
+                    </td>
+                    <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap">{log.action}</td>
+                    <td className="px-4 py-3 text-muted-foreground"><Hash className="inline w-3 h-3 mr-1" />{String(log.details?.message || "-")}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
