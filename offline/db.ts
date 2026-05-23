@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
+import type { ReceiptTemplate, LogoPosition, DividerStyle, LayoutMode, TextAlignment } from '@/components/settings/receipts/receipt-types';
 
 export interface User {
   id: string;
@@ -338,6 +339,92 @@ export interface BusinessSettings {
   security_role_permissions?: Record<string, Record<string, boolean>>;
   security_pin_last_changed?: string;
   security_pin_changed_by?: string;
+
+  // ── Receipt Customization (v7) ──
+  // Business Info
+  receipt_store_name?: string;
+  receipt_legal_name?: string;
+  receipt_address?: string;
+  receipt_phone?: string;
+  receipt_email?: string;
+  receipt_website?: string;
+  receipt_gstin?: string;
+  receipt_fssai?: string;
+  receipt_branch_name?: string;
+  receipt_support_contact?: string;
+  receipt_show_store_name?: boolean;
+  receipt_show_legal_name?: boolean;
+  receipt_show_address?: boolean;
+  receipt_show_phone?: boolean;
+  receipt_show_email?: boolean;
+  receipt_show_website?: boolean;
+  receipt_show_gstin?: boolean;
+  receipt_show_fssai?: boolean;
+  receipt_show_branch_name?: boolean;
+  receipt_show_support_contact?: boolean;
+  // Content
+  receipt_thank_you_msg?: string;
+  receipt_promo_msg?: string;
+  receipt_seasonal_msg?: string;
+  receipt_return_policy?: string;
+  receipt_exchange_policy?: string;
+  // Branding
+  receipt_logo_position?: LogoPosition;
+  receipt_logo_size?: number;
+  receipt_watermark_url?: string;
+  receipt_qr_data?: string;
+  receipt_show_qr?: boolean;
+  receipt_social_instagram?: string;
+  receipt_social_facebook?: string;
+  receipt_social_twitter?: string;
+  receipt_social_youtube?: string;
+  receipt_show_social_qr?: boolean;
+  receipt_brand_color?: string;
+  // Layout
+  receipt_font_size?: number;
+  receipt_layout_mode?: LayoutMode;
+  receipt_margin_top?: number;
+  receipt_margin_bottom?: number;
+  receipt_line_spacing?: number;
+  receipt_divider_style?: DividerStyle;
+  receipt_text_alignment?: TextAlignment;
+  receipt_show_borders?: boolean;
+  // Tax & Payment Display
+  receipt_show_cgst_sgst?: boolean;
+  receipt_show_igst?: boolean;
+  receipt_show_discount_breakdown?: boolean;
+  receipt_show_coupon?: boolean;
+  receipt_show_saved_amount?: boolean;
+  receipt_show_payment_method?: boolean;
+  receipt_show_change_returned?: boolean;
+  receipt_show_round_off?: boolean;
+  receipt_show_taxable_value?: boolean;
+  // Customer Display
+  receipt_show_customer_name?: boolean;
+  receipt_show_customer_phone?: boolean;
+  receipt_show_loyalty_id?: boolean;
+  receipt_show_loyalty_points?: boolean;
+  receipt_show_membership_tier?: boolean;
+  receipt_show_customer_notes?: boolean;
+  receipt_mask_customer_phone?: boolean;
+  receipt_hide_customer_on_duplicate?: boolean;
+  // Print Options
+  receipt_auto_print?: boolean;
+  receipt_duplicate_print?: boolean;
+  receipt_silent_print?: boolean;
+  receipt_num_copies?: number;
+  receipt_thermal_optimization?: boolean;
+  receipt_ink_saving?: boolean;
+  receipt_dark_mode?: boolean;
+  // Digital Receipts
+  receipt_sms_enabled?: boolean;
+  receipt_email_enabled?: boolean;
+  receipt_whatsapp_enabled?: boolean;
+  receipt_qr_digital_link?: boolean;
+  receipt_pdf_download?: boolean;
+  receipt_email_subject?: string;
+  receipt_sms_template?: string;
+  receipt_whatsapp_template?: string;
 }
 
 export interface StockTransfer {
@@ -366,6 +453,8 @@ export interface SyncQueue {
   timestamp: string;
 }
 
+export type { ReceiptTemplate };
+
 const db = new Dexie('BillDaleDB') as Dexie & {
   users: EntityTable<User, 'id'>;
   businesses: EntityTable<Business, 'id'>;
@@ -390,6 +479,7 @@ const db = new Dexie('BillDaleDB') as Dexie & {
   stock_transfers: EntityTable<StockTransfer, 'id'>;
   stock_transfer_items: EntityTable<StockTransferItem, 'id'>;
   business_settings: EntityTable<BusinessSettings, 'id'>;
+  receipt_templates: EntityTable<ReceiptTemplate, 'id'>;
 };
 
 // v1 → existing schema
@@ -539,6 +629,34 @@ db.version(6).stores({
   stock_transfers: 'id, business_id, source_branch_id, dest_branch_id, status',
   stock_transfer_items: 'id, transfer_id, product_id',
   business_settings: 'id, business_id',
+});
+
+// v7 → receipt_templates for template management
+db.version(7).stores({
+  users: 'id, email, role, branch_id',
+  businesses: 'id, name',
+  business_members: 'id, business_id, user_id, role',
+  staff_invitations: 'id, business_id, token, accepted_at',
+  activity_logs: 'id, business_id, user_id, action, synced',
+  notifications: 'id, business_id, user_id, read',
+  branches: 'id, name, status',
+  products: 'id, name, category, brand, sku',
+  inventory: 'id, product_id, branch_id',
+  customers: 'id, business_id, phone, email, synced',
+  invoices: 'id, branch_id, user_id, customer_id, invoice_number, status, synced',
+  invoice_items: 'id, invoice_id, product_id',
+  held_orders: 'id, business_id, branch_id, user_id, customer_id',
+  cash_registers: 'id, branch_id, business_id, date, status',
+  coupons: 'id, business_id, code, is_active',
+  manager_approvals: 'id, business_id, branch_id, action',
+  return_orders: 'id, original_invoice_id, branch_id, business_id, synced',
+  refunds: 'id, invoice_id, synced',
+  staff_members: 'id, business_id, name, is_active',
+  sync_queue: '++id, table_name, operation',
+  stock_transfers: 'id, business_id, source_branch_id, dest_branch_id, status',
+  stock_transfer_items: 'id, transfer_id, product_id',
+  business_settings: 'id, business_id',
+  receipt_templates: 'id, business_id, is_default',
 });
 
 export type { db };
