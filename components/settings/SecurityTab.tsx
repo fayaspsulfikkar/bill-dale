@@ -105,6 +105,18 @@ export default function SecurityTab() {
     security_hide_profit_non_admin: true,
     security_pin_required_actions: [] as string[],
     security_role_permissions: {} as Record<string, Record<string, boolean>>,
+    
+    // Phase 3.2 State
+    security_2fa_enabled: false,
+    security_otp_login_enabled: false,
+    security_device_trust_management: true,
+    security_login_anomaly_detection: false,
+    security_custom_roles_enabled: false,
+    security_department_restrictions: false,
+    security_concurrent_sessions_limit: 1,
+    security_device_activity_tracking: true,
+    security_audit_export_enabled: true,
+    security_audit_risk_tagging: true,
   });
 
   const [saving, setSaving] = useState(false);
@@ -137,6 +149,18 @@ export default function SecurityTab() {
         security_hide_profit_non_admin: settings.security_hide_profit_non_admin ?? true,
         security_pin_required_actions: settings.security_pin_required_actions ?? [],
         security_role_permissions: settings.security_role_permissions ?? {},
+        
+        // Phase 3.2 Hydration
+        security_2fa_enabled: settings.security_2fa_enabled ?? prev.security_2fa_enabled,
+        security_otp_login_enabled: settings.security_otp_login_enabled ?? prev.security_otp_login_enabled,
+        security_device_trust_management: settings.security_device_trust_management ?? prev.security_device_trust_management,
+        security_login_anomaly_detection: settings.security_login_anomaly_detection ?? prev.security_login_anomaly_detection,
+        security_custom_roles_enabled: settings.security_custom_roles_enabled ?? prev.security_custom_roles_enabled,
+        security_department_restrictions: settings.security_department_restrictions ?? prev.security_department_restrictions,
+        security_concurrent_sessions_limit: settings.security_concurrent_sessions_limit ?? prev.security_concurrent_sessions_limit,
+        security_device_activity_tracking: settings.security_device_activity_tracking ?? prev.security_device_activity_tracking,
+        security_audit_export_enabled: settings.security_audit_export_enabled ?? prev.security_audit_export_enabled,
+        security_audit_risk_tagging: settings.security_audit_risk_tagging ?? prev.security_audit_risk_tagging,
       }));
     }
   }, [settings]);
@@ -370,6 +394,22 @@ export default function SecurityTab() {
         </CardContent>
       </Card>
 
+      {/* --- NEW: AUTHENTICATION & TRUST --- */}
+      <Card className="bg-card/50 border-border/50 shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <User className="w-4 h-4 text-primary" /> Identity & Trust
+          </CardTitle>
+          <CardDescription>Manage multi-factor authentication and device trust policies.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ToggleRow label="Enable 2FA (Authenticator App)" desc="Require TOTP for admin accounts during cloud login." value={form.security_2fa_enabled} onChange={() => u({ security_2fa_enabled: !form.security_2fa_enabled })} />
+          <ToggleRow label="OTP Login Support" desc="Allow staff to log in via SMS/Email OTP instead of passwords." value={form.security_otp_login_enabled} onChange={() => u({ security_otp_login_enabled: !form.security_otp_login_enabled })} />
+          <ToggleRow label="Device Trust Management" desc="Require email verification for unrecognized devices." value={form.security_device_trust_management} onChange={() => u({ security_device_trust_management: !form.security_device_trust_management })} />
+          <ToggleRow label="Login Anomaly Detection" desc="Alert admins on suspicious login attempts (e.g., unusual time/location)." value={form.security_login_anomaly_detection} onChange={() => u({ security_login_anomaly_detection: !form.security_login_anomaly_detection })} />
+        </CardContent>
+      </Card>
+
       {/* --- GROUP B: SESSION LOCK CONFIGURATION --- */}
       <Card className="bg-card/50 border-border/50 shadow-sm">
         <CardHeader>
@@ -397,6 +437,22 @@ export default function SecurityTab() {
             <ToggleRow label="Lock on Minimize" desc="Lock immediately when the app goes to the background." value={form.security_lock_on_minimize} onChange={() => u({ security_lock_on_minimize: !form.security_lock_on_minimize })} />
             <ToggleRow label="Lock After Sale" desc="Require PIN again after completing a checkout." value={form.security_lock_after_sale} onChange={() => u({ security_lock_after_sale: !form.security_lock_after_sale })} />
           </div>
+          <div className="pt-4 border-t border-border/50">
+            <Label className="text-sm font-semibold mb-4 block">Concurrent Sessions</Label>
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Max allowed sessions per user</Label>
+              <ChipSelect value={form.security_concurrent_sessions_limit} options={[
+                { label: "1 (Strict)", value: 1 },
+                { label: "2 Devices", value: 2 },
+                { label: "3 Devices", value: 3 },
+                { label: "Unlimited", value: 0 }
+              ]} onChange={(v) => u({ security_concurrent_sessions_limit: v })} />
+              <p className="text-xs text-muted-foreground mt-2">Force-logouts will occur if a user exceeds this limit.</p>
+            </div>
+            <div className="mt-4">
+              <ToggleRow label="Device Activity Tracking" desc="Log detailed OS and browser metadata for active sessions." value={form.security_device_activity_tracking} onChange={() => u({ security_device_activity_tracking: !form.security_device_activity_tracking })} />
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -418,6 +474,11 @@ export default function SecurityTab() {
               <Label>Lockout Cooldown (mins)</Label>
               <ChipSelect value={form.security_cooldown_minutes} options={COOLDOWN_OPTIONS} onChange={(v) => u({ security_cooldown_minutes: v })} />
             </div>
+          </div>
+
+          <div className="pt-4 border-t border-border/50 space-y-4">
+            <ToggleRow label="Enable Custom Roles" desc="Allow creation of non-standard roles with tailored permissions." value={form.security_custom_roles_enabled} onChange={() => u({ security_custom_roles_enabled: !form.security_custom_roles_enabled })} />
+            <ToggleRow label="Department-Level Restrictions" desc="Restrict role capabilities by departments (e.g., Only apparel, only footwear)." value={form.security_department_restrictions} onChange={() => u({ security_department_restrictions: !form.security_department_restrictions })} />
           </div>
           
           <div className="pt-4 border-t border-border/50">
@@ -516,6 +577,10 @@ export default function SecurityTab() {
           </CardTitle>
           <CardDescription>Recent security events and sensitive actions.</CardDescription>
         </CardHeader>
+        <div className="px-6 pb-4 space-y-4 border-b border-border/50">
+          <ToggleRow label="Allow Audit Log Export" desc="Enable CSV exports of the audit log for external review." value={form.security_audit_export_enabled} onChange={() => u({ security_audit_export_enabled: !form.security_audit_export_enabled })} />
+          <ToggleRow label="Risk-Level Tagging" desc="Automatically highlight high-risk actions (e.g. bulk deletions)." value={form.security_audit_risk_tagging} onChange={() => u({ security_audit_risk_tagging: !form.security_audit_risk_tagging })} />
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead className="bg-muted/30 text-muted-foreground text-xs uppercase border-y border-border/50">

@@ -352,6 +352,24 @@ export interface BusinessSettings {
   security_pin_last_changed?: string;
   security_pin_changed_by?: string;
 
+  // Authentication & Trust (Phase 3.2)
+  security_2fa_enabled?: boolean;
+  security_otp_login_enabled?: boolean;
+  security_device_trust_management?: boolean;
+  security_login_anomaly_detection?: boolean;
+
+  // Advanced RBAC (Phase 3.2)
+  security_custom_roles_enabled?: boolean;
+  security_department_restrictions?: boolean;
+
+  // Session Security (Phase 3.2)
+  security_concurrent_sessions_limit?: number; // 0 = unlimited
+  security_device_activity_tracking?: boolean;
+
+  // Audit Logs (Phase 3.2)
+  security_audit_export_enabled?: boolean;
+  security_audit_risk_tagging?: boolean;
+
   // ── Receipt Customization (v7) ──
   // Business Info
   receipt_store_name?: string;
