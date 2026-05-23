@@ -279,6 +279,9 @@ export interface BusinessSettings {
   invoice_prefix?: string;
   invoice_start_number?: number;
   invoice_number_padding?: number;
+  invoice_reset_cycle?: 'never' | 'monthly' | 'yearly';
+  tax_inclusive_pricing?: boolean;
+  return_invoice_templates?: boolean;
 
   // Display & Formatting
   date_format?: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
@@ -290,6 +293,15 @@ export interface BusinessSettings {
   staff_mode_default_minutes?: number;
   auto_session_timeout_minutes?: number;
   barcode_format?: 'ean13' | 'code128' | 'qr';
+  pos_auto_cart_recovery?: boolean;
+  pos_auto_print_receipt?: boolean;
+  pos_barcode_autofocus?: boolean;
+  pos_session_persistence?: boolean;
+
+  // Business Hours & Info
+  business_timezone?: string;
+  business_multi_branch_enabled?: boolean;
+  business_multi_language?: string;
 
   // Business Hours (informational for analytics)
   business_hours_open?: string;

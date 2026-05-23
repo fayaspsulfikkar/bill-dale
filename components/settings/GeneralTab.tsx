@@ -95,6 +95,9 @@ export default function GeneralTab() {
     invoice_prefix: "INV-",
     invoice_start_number: 1,
     invoice_number_padding: 4,
+    invoice_reset_cycle: "never" as "never" | "monthly" | "yearly",
+    tax_inclusive_pricing: false,
+    return_invoice_templates: false,
     // POS Behavior
     default_payment_method: "cash" as "cash" | "card" | "upi",
     pos_quick_add: true,
@@ -102,10 +105,17 @@ export default function GeneralTab() {
     staff_mode_default_minutes: 10,
     low_stock_threshold: 10,
     barcode_format: "ean13" as "ean13" | "code128" | "qr",
+    pos_auto_cart_recovery: true,
+    pos_auto_print_receipt: true,
+    pos_barcode_autofocus: true,
+    pos_session_persistence: true,
     // Business Hours
     business_hours_open: "09:00",
     business_hours_close: "21:00",
     business_days: ["mon", "tue", "wed", "thu", "fri", "sat"] as string[],
+    business_timezone: "Asia/Kolkata",
+    business_multi_branch_enabled: false,
+    business_multi_language: "en",
     // Notifications
     notify_low_stock: true,
     notify_daily_summary: true,
@@ -131,15 +141,25 @@ export default function GeneralTab() {
         invoice_prefix: settings.invoice_prefix ?? prev.invoice_prefix,
         invoice_start_number: settings.invoice_start_number ?? prev.invoice_start_number,
         invoice_number_padding: settings.invoice_number_padding ?? prev.invoice_number_padding,
+        invoice_reset_cycle: settings.invoice_reset_cycle || prev.invoice_reset_cycle,
+        tax_inclusive_pricing: settings.tax_inclusive_pricing ?? prev.tax_inclusive_pricing,
+        return_invoice_templates: settings.return_invoice_templates ?? prev.return_invoice_templates,
         default_payment_method: settings.default_payment_method || prev.default_payment_method,
         pos_quick_add: settings.pos_quick_add ?? prev.pos_quick_add,
         pos_sound_effects: settings.pos_sound_effects ?? prev.pos_sound_effects,
         staff_mode_default_minutes: settings.staff_mode_default_minutes ?? prev.staff_mode_default_minutes,
         low_stock_threshold: settings.low_stock_threshold ?? prev.low_stock_threshold,
         barcode_format: settings.barcode_format || prev.barcode_format,
+        pos_auto_cart_recovery: settings.pos_auto_cart_recovery ?? prev.pos_auto_cart_recovery,
+        pos_auto_print_receipt: settings.pos_auto_print_receipt ?? prev.pos_auto_print_receipt,
+        pos_barcode_autofocus: settings.pos_barcode_autofocus ?? prev.pos_barcode_autofocus,
+        pos_session_persistence: settings.pos_session_persistence ?? prev.pos_session_persistence,
         business_hours_open: settings.business_hours_open || prev.business_hours_open,
         business_hours_close: settings.business_hours_close || prev.business_hours_close,
         business_days: settings.business_days || prev.business_days,
+        business_timezone: settings.business_timezone || prev.business_timezone,
+        business_multi_branch_enabled: settings.business_multi_branch_enabled ?? prev.business_multi_branch_enabled,
+        business_multi_language: settings.business_multi_language || prev.business_multi_language,
         notify_low_stock: settings.notify_low_stock ?? prev.notify_low_stock,
         notify_daily_summary: settings.notify_daily_summary ?? prev.notify_daily_summary,
         notify_sync_failures: settings.notify_sync_failures ?? prev.notify_sync_failures,
@@ -249,6 +269,10 @@ export default function GeneralTab() {
               ]} onChange={v => u({ time_format: v })} />
             </div>
           </div>
+          <div className="space-y-4 pt-2 border-t border-border/50">
+            <ToggleRow label="Tax-Inclusive Pricing Mode" desc="Assume entered product prices already include GST." value={form.tax_inclusive_pricing} onChange={() => u({ tax_inclusive_pricing: !form.tax_inclusive_pricing })} />
+            <ToggleRow label="Multi-Currency Support (Preview)" desc="Prepare the POS for multi-currency transactions." value={false} onChange={() => {}} />
+          </div>
         </CardContent>
       </Card>
 
@@ -280,6 +304,18 @@ export default function GeneralTab() {
               ]} onChange={v => u({ invoice_number_padding: v })} />
               <p className="text-xs text-muted-foreground">Preview: {form.invoice_prefix}{String(form.invoice_start_number).padStart(form.invoice_number_padding, '0')}</p>
             </div>
+            <div className="space-y-2">
+              <Label>Invoice Reset Cycle</Label>
+              <ChipSelect value={form.invoice_reset_cycle} options={[
+                { label: "Never", value: "never" as const },
+                { label: "Monthly", value: "monthly" as const },
+                { label: "Yearly", value: "yearly" as const },
+              ]} onChange={v => u({ invoice_reset_cycle: v })} />
+            </div>
+          </div>
+          <div className="space-y-4 pt-2 border-t border-border/50">
+            <ToggleRow label="Return Invoice Templates" desc="Use dedicated templates for refunds and credit notes." value={form.return_invoice_templates} onChange={() => u({ return_invoice_templates: !form.return_invoice_templates })} />
+            <ToggleRow label="GST Auto-Classification" desc="Automatically assign HSN codes based on product category." value={false} onChange={() => {}} />
           </div>
         </CardContent>
       </Card>
@@ -316,6 +352,10 @@ export default function GeneralTab() {
           <div className="space-y-4 pt-2 border-t border-border/50">
             <ToggleRow label="POS Quick Add Mode" desc="Clicking a product directly adds it to cart." value={form.pos_quick_add} onChange={() => u({ pos_quick_add: !form.pos_quick_add })} />
             <ToggleRow label="POS Sound Effects" desc="Play a beep when scanning or adding items." value={form.pos_sound_effects} onChange={() => u({ pos_sound_effects: !form.pos_sound_effects })} />
+            <ToggleRow label="Auto Cart Recovery" desc="Restore abandoned carts if the POS is closed unexpectedly." value={form.pos_auto_cart_recovery} onChange={() => u({ pos_auto_cart_recovery: !form.pos_auto_cart_recovery })} />
+            <ToggleRow label="Auto Print Receipts" desc="Automatically fire a print job after successful checkout." value={form.pos_auto_print_receipt} onChange={() => u({ pos_auto_print_receipt: !form.pos_auto_print_receipt })} />
+            <ToggleRow label="Barcode Autofocus" desc="Keep the global search bar focused for rapid scanning." value={form.pos_barcode_autofocus} onChange={() => u({ pos_barcode_autofocus: !form.pos_barcode_autofocus })} />
+            <ToggleRow label="Session Persistence" desc="Keep the POS drawer state intact between reloads." value={form.pos_session_persistence} onChange={() => u({ pos_session_persistence: !form.pos_session_persistence })} />
           </div>
         </CardContent>
       </Card>
@@ -332,6 +372,34 @@ export default function GeneralTab() {
             <div className="space-y-2">
               <Label>Closing Time</Label>
               <Input type="time" value={form.business_hours_close} onChange={e => u({ business_hours_close: e.target.value })} className="max-w-[160px]" />
+            </div>
+            <div className="space-y-2">
+              <Label>Timezone</Label>
+              <select
+                value={form.business_timezone}
+                onChange={e => u({ business_timezone: e.target.value })}
+                className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
+                <option value="America/New_York">America/New_York (EST)</option>
+                <option value="Europe/London">Europe/London (GMT)</option>
+                <option value="Asia/Dubai">Asia/Dubai (GST)</option>
+                <option value="Asia/Singapore">Asia/Singapore (SGT)</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label>System Language</Label>
+              <select
+                value={form.business_multi_language}
+                onChange={e => u({ business_multi_language: e.target.value })}
+                className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <option value="en">English (US)</option>
+                <option value="hi">Hindi (India)</option>
+                <option value="ar">Arabic</option>
+                <option value="es">Spanish</option>
+                <option value="fr">French</option>
+              </select>
             </div>
           </div>
           <div className="space-y-2">
