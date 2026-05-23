@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useCartStore } from "@/store/cartStore";
 import { useAuthStore } from "@/store/authStore";
 import { usePOSStore } from "@/store/posStore";
-import { canDo, requiresApproval } from "@/lib/permissions";
+import { canDo } from "@/lib/permissions";
+import { useNeedsApproval } from "@/hooks/usePermission";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +23,7 @@ export function QuickAddItemModal() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pendingApproval, setPendingApproval] = useState(false);
 
-  const needsApproval = requiresApproval(role, "quick_add_item");
+  const needsApproval = useNeedsApproval("quick_add_item");
 
   const validate = () => {
     const e: Record<string, string> = {};

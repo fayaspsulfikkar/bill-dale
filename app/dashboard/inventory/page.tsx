@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { formatINR } from "@/lib/formatCurrency";
 import { Plus, Search, AlertCircle, Building2, Pencil, Check, X, Trash2, PlusCircle, ChevronDown, Barcode, Download, Upload, Undo, RefreshCw, Sparkles, Volume2, ShoppingBag } from "lucide-react";
 import { useCurrencyVersion } from "@/components/CurrencyRefreshBoundary";
+import { useNeedsApproval } from "@/hooks/usePermission";
 
 interface SizeVariant { id: string; size: string; sku: string; stockPerBranch: Record<string, string>; }
 interface FormState { name: string; category: string; brand: string; color: string; price: string; gst_percent: string; price_includes_gst: boolean; variants: SizeVariant[]; }
@@ -136,6 +137,7 @@ export default function InventoryPage() {
   const [pinForEdit, setPinForEdit] = useState<{ productId: string; branchId: string; stock: number } | null>(null);
   const [pinForAddProduct, setPinForAddProduct] = useState(false);
   const [pinForDelete, setPinForDelete] = useState<string | null>(null);
+  const needsDeleteApproval = useNeedsApproval("delete_products");
 
   // New Frictionless Features State
   const [activeTabFilter, setActiveTabFilter] = useState<"all" | "low" | "out">("all");
@@ -579,14 +581,20 @@ export default function InventoryPage() {
   };
 
   const deleteProduct = (pid: string) => {
-    // Gate all deletions behind Admin PIN
-    setPinForDelete(pid);
+    if (needsDeleteApproval) {
+      setPinForDelete(pid);
+    } else {
+      // Direct delete if approval not needed
+      setPinForDelete(pid);
+      doDeleteProduct(pid);
+    }
   };
 
-  const doDeleteProduct = async () => {
-    if (!pinForDelete) return;
-    await db.inventory.where("product_id").equals(pinForDelete).delete();
-    await db.products.delete(pinForDelete);
+  const doDeleteProduct = async (pidOverride?: string) => {
+    const pid = pidOverride || pinForDelete;
+    if (!pid) return;
+    await db.inventory.where("product_id").equals(pid).delete();
+    await db.products.delete(pid);
     setPinForDelete(null);
   };
 
@@ -1100,7 +1108,7 @@ export default function InventoryPage() {
       <AdminPinDialog
         open={!!pinForDelete}
         title="Confirm Product Deletion"
-        onSuccess={doDeleteProduct}
+        onSuccess={() => doDeleteProduct()}
         onClose={() => setPinForDelete(null)}
       />
     </div>

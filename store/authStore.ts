@@ -15,6 +15,7 @@ interface AuthState {
   businessName: string | null;
   role: UserRole | null;
   permissions: string[];
+  pinRequiredActions: string[];
   hasCompletedOnboarding: boolean;
   isAuthenticated: boolean;
 
@@ -23,7 +24,7 @@ interface AuthState {
   staffModeUnlockUntil: number | null;
   setStaffMode: (on: boolean, unlockUntil?: number | null) => void;
 
-  setSession: (user: AuthUser, businessId: string | null, businessName: string | null, role: UserRole | null, permissions: string[], hasOnboarded: boolean) => void;
+  setSession: (user: AuthUser, businessId: string | null, businessName: string | null, role: UserRole | null, permissions: string[], hasOnboarded: boolean, pinRequiredActions?: string[]) => void;
   clearSession: () => void;
   setOnboardingComplete: (businessId: string, businessName: string) => void;
   // Legacy compat
@@ -39,6 +40,7 @@ export const useAuthStore = create<AuthState>()(
       businessName: null,
       role: null,
       permissions: [],
+      pinRequiredActions: [],
       hasCompletedOnboarding: false,
       isAuthenticated: false,
       staffMode: true, // ← always locked by default
@@ -46,13 +48,14 @@ export const useAuthStore = create<AuthState>()(
 
       setStaffMode: (on, unlockUntil = null) => set({ staffMode: on, staffModeUnlockUntil: on ? null : unlockUntil }),
 
-      setSession: (user, businessId, businessName, role, permissions, hasOnboarded) =>
+      setSession: (user, businessId, businessName, role, permissions, hasOnboarded, pinRequiredActions = []) =>
         set({
           user,
           businessId,
           businessName,
           role,
           permissions,
+          pinRequiredActions,
           hasCompletedOnboarding: hasOnboarded,
           isAuthenticated: true,
         }),
@@ -64,6 +67,7 @@ export const useAuthStore = create<AuthState>()(
           businessName: null,
           role: null,
           permissions: [],
+          pinRequiredActions: [],
           hasCompletedOnboarding: false,
           isAuthenticated: false,
           staffMode: true, // reset to locked on logout
@@ -82,6 +86,7 @@ export const useAuthStore = create<AuthState>()(
           businessName: null,
           role: null,
           permissions: [],
+          pinRequiredActions: [],
           hasCompletedOnboarding: false,
           isAuthenticated: false,
           staffMode: true, // reset to locked on logout

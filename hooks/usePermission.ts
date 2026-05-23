@@ -15,3 +15,17 @@ export function useRole(): UserRole | null {
 export function useIsAdmin(): boolean {
   return useAuthStore((s) => isAdminLevel(s.role));
 }
+
+export function useActionRequiresPin(actionId: string): boolean {
+  return useAuthStore((s) => s.pinRequiredActions?.includes(actionId) ?? false);
+}
+
+export function useNeedsApproval(actionId: string): boolean {
+  const role = useRole();
+  const permissions = useAuthStore((s) => s.permissions);
+  const isPinAction = useActionRequiresPin(actionId);
+  
+  if (isPinAction) return true;
+  if (isAdminLevel(role)) return false;
+  return !permissions.includes(actionId);
+}

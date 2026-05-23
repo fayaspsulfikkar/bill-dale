@@ -45,7 +45,7 @@ export default function SettingsPage() {
 
       <div className="flex gap-6">
         {/* Sidebar Tabs */}
-        <div className="w-52 shrink-0 space-y-1">
+        <div className="w-52 shrink-0 space-y-1 sticky top-6 self-start">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;

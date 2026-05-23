@@ -169,10 +169,40 @@ async function hydrateUser(
   }
 
   const role = (membership?.role ?? (hasOnboarded ? "owner" : null)) as UserRole | null;
-  const preset = role ? ROLE_PRESETS[role] : undefined;
-  const permissions = preset
-    ? [...preset, ...(membership?.permissions ?? [])]
-    : (membership?.permissions ?? []);
+  
+  // ── Fetch dynamic security settings ──
+  let customRolePermissions: Record<string, boolean> | undefined;
+  let pinRequiredActions: string[] = [];
+
+  if (businessId) {
+    try {
+      const bSettings = await db.business_settings.where("business_id").equals(businessId).first();
+      if (bSettings) {
+        pinRequiredActions = bSettings.security_pin_required_actions || [];
+        if (role && bSettings.security_role_permissions?.[role]) {
+          customRolePermissions = bSettings.security_role_permissions[role];
+        }
+      }
+    } catch {
+      // ignore offline/dexie error
+    }
+  }
+
+  // ── Compute final permissions array ──
+  let permissions: string[] = [];
+  if (role === 'owner' || role === 'admin') {
+    permissions = Array.from(ROLE_PRESETS['owner'] || []);
+  } else if (role) {
+    if (customRolePermissions) {
+      permissions = Object.entries(customRolePermissions).filter(([_, v]) => v).map(([k]) => k);
+    } else {
+      permissions = Array.from(ROLE_PRESETS[role] || []);
+    }
+  }
+
+  if (membership?.permissions) {
+    permissions = Array.from(new Set([...permissions, ...membership.permissions]));
+  }
 
   setSession(
     {
@@ -186,5 +216,6 @@ async function hydrateUser(
     role,
     permissions,
     hasOnboarded,
+    pinRequiredActions
   );
 }

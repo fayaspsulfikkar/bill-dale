@@ -6,6 +6,7 @@ import db from "@/offline/db";
 import { useAuthStore } from "@/store/authStore";
 import { usePOSStore } from "@/store/posStore";
 import { AdminPinDialog } from "@/components/AdminPinDialog";
+import { useActionRequiresPin } from "@/hooks/usePermission";
 import { MapPin, ChevronDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ export function BranchFilterChip({ value, onChange }: BranchFilterChipProps) {
   const branches = useLiveQuery(() => db.branches.toArray(), []) || [];
   const { businessId } = useAuthStore();
   const { selectedBranchId } = usePOSStore();
+  const requiresPin = useActionRequiresPin("switch_branch");
   
   const [open, setOpen] = useState(false);
   const [pinDialogTarget, setPinDialogTarget] = useState<string | "all" | null>(null);
@@ -28,8 +30,8 @@ export function BranchFilterChip({ value, onChange }: BranchFilterChipProps) {
   if (!businessId) return null;
 
   const handleSelect = (branchId: string | "all") => {
-    // If they select the currently locked branch, allow it without PIN
-    if (branchId === selectedBranchId) {
+    // If they select the currently locked branch or if PIN is not required, allow it
+    if (branchId === selectedBranchId || !requiresPin) {
       onChange(branchId);
       setOpen(false);
     } else {
