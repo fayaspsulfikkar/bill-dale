@@ -425,6 +425,69 @@ export interface BusinessSettings {
   receipt_email_subject?: string;
   receipt_sms_template?: string;
   receipt_whatsapp_template?: string;
+  receipt_whatsapp_template?: string;
+
+  // ── Users & Staff (Phase 4) ──
+  staff_management_enabled?: boolean;
+  staff_attendance_tracking?: boolean;
+  staff_performance_metrics?: boolean;
+  staff_shift_management?: boolean;
+
+  // ── Payments & Gateways (Phase 4) ──
+  payment_allow_split?: boolean;
+  payment_allow_tips?: boolean;
+  payment_auto_refunds?: boolean;
+  payment_gateway_stripe_enabled?: boolean;
+  payment_gateway_stripe_key?: string;
+  payment_gateway_razorpay_enabled?: boolean;
+  payment_gateway_razorpay_key?: string;
+
+  // ── Advanced Inventory Rules (Phase 4) ──
+  inventory_expiry_tracking?: boolean;
+  inventory_batch_tracking?: boolean;
+  inventory_auto_reorder?: boolean;
+  inventory_sku_generation_format?: string;
+  inventory_barcode_generation?: 'ean13' | 'code128' | 'qr';
+
+  // ── Customers & Loyalty Engine (Phase 4) ──
+  loyalty_program_enabled?: boolean;
+  loyalty_points_per_currency?: number;
+  loyalty_min_redemption_points?: number;
+  loyalty_enable_store_credits?: boolean;
+  loyalty_enable_referrals?: boolean;
+  loyalty_tiers_config?: Record<string, unknown>; // Stores tiers like Silver/Gold/Platinum rules
+
+  // ── Notification Center (Phase 4) ──
+  notification_email_provider?: 'smtp' | 'sendgrid' | 'resend';
+  notification_whatsapp_provider?: 'twilio' | 'meta';
+  notification_sms_provider?: 'twilio' | 'msg91';
+  notification_api_keys?: Record<string, string>;
+
+  // ── Third-Party Integrations (Phase 4) ──
+  integration_shopify_enabled?: boolean;
+  integration_woocommerce_enabled?: boolean;
+  integration_tally_sync?: boolean;
+  integration_zoho_sync?: boolean;
+  integration_webhooks?: Array<{ url: string; events: string[] }>;
+
+  // ── AI & Automation (Phase 4) ──
+  ai_stock_forecasting?: boolean;
+  ai_demand_prediction?: boolean;
+  ai_fraud_detection?: boolean;
+  ai_customer_behavior_analysis?: boolean;
+  ai_smart_reorder_suggestions?: boolean;
+
+  // ── Appearance & Branding (Phase 4) ──
+  appearance_theme?: 'light' | 'dark' | 'system';
+  appearance_accent_color?: string;
+  appearance_compact_mode?: boolean;
+  appearance_dashboard_layout?: 'standard' | 'dense' | 'analytics_first';
+
+  // ── Advanced Diagnostics (Phase 4) ──
+  advanced_developer_mode?: boolean;
+  advanced_api_management?: boolean;
+  advanced_performance_analytics?: boolean;
+  advanced_experimental_features?: boolean;
 }
 
 export interface StockTransfer {
@@ -654,9 +717,49 @@ db.version(7).stores({
   staff_members: 'id, business_id, name, is_active',
   sync_queue: '++id, table_name, operation',
   stock_transfers: 'id, business_id, source_branch_id, dest_branch_id, status',
+  business_settings: 'id, business_id',
+  receipt_templates: 'id, business_id, is_default',
+});
+
+// v8 → Enterprise settings expansion (no new indexes needed, just schema bump for safety)
+db.version(8).stores({
+  users: 'id, email, role, branch_id',
+  businesses: 'id, name',
+  business_members: 'id, business_id, user_id, role',
+  staff_invitations: 'id, business_id, token, accepted_at',
+  activity_logs: 'id, business_id, user_id, action, synced',
+  notifications: 'id, business_id, user_id, read',
+  branches: 'id, name, status',
+  products: 'id, name, category, brand, sku',
+  inventory: 'id, product_id, branch_id',
+  customers: 'id, business_id, phone, email, synced',
+  invoices: 'id, branch_id, user_id, customer_id, invoice_number, status, synced',
+  invoice_items: 'id, invoice_id, product_id',
+  held_orders: 'id, business_id, branch_id, user_id, customer_id',
+  cash_registers: 'id, branch_id, business_id, date, status',
+  coupons: 'id, business_id, code, is_active',
+  manager_approvals: 'id, business_id, branch_id, action',
+  return_orders: 'id, original_invoice_id, branch_id, business_id, synced',
+  refunds: 'id, invoice_id, synced',
+  staff_members: 'id, business_id, name, is_active',
+  sync_queue: '++id, table_name, operation',
+  stock_transfers: 'id, business_id, source_branch_id, dest_branch_id, status',
   stock_transfer_items: 'id, transfer_id, product_id',
   business_settings: 'id, business_id',
   receipt_templates: 'id, business_id, is_default',
+}).upgrade(tx => {
+  // Ensure all existing business_settings records get default enterprise config values if missing
+  return tx.table('business_settings').toCollection().modify(setting => {
+    // Scaffold default AI settings safely
+    if (setting.ai_stock_forecasting === undefined) setting.ai_stock_forecasting = false;
+    if (setting.ai_fraud_detection === undefined) setting.ai_fraud_detection = false;
+    
+    // Scaffold default Appearance settings safely
+    if (setting.appearance_theme === undefined) setting.appearance_theme = 'system';
+    
+    // Scaffold loyalty defaults safely
+    if (setting.loyalty_program_enabled === undefined) setting.loyalty_program_enabled = false;
+  });
 });
 
 export type { db };
