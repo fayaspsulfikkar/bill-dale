@@ -56,17 +56,18 @@ export default function ReceiptsTab() {
 
   return (
     <div className="space-y-4 relative pb-20">
-      <div className="flex items-center justify-between">
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between sticky top-0 z-30 bg-background/95 backdrop-blur-sm py-4 -my-4 mb-4">
         <div>
           <h2 className="text-xl font-bold tracking-tight">Receipt Customization</h2>
           <p className="text-sm text-muted-foreground">Configure how your printed and digital receipts look.</p>
         </div>
         <button
           onClick={() => setShowPreview(!showPreview)}
-          className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all ${
+          className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all shadow-sm ${
             showPreview
               ? "bg-primary/10 border-primary text-primary"
-              : "bg-muted/30 border-border text-muted-foreground hover:text-foreground"
+              : "bg-muted/30 border-border text-muted-foreground hover:text-foreground hover:bg-muted/50"
           }`}
         >
           <Eye className="w-3.5 h-3.5" />
@@ -76,7 +77,7 @@ export default function ReceiptsTab() {
 
       <div className="flex gap-6">
         {/* ── Sub-navigation ── */}
-        <div className="w-44 shrink-0 space-y-0.5">
+        <div className="w-44 shrink-0 space-y-0.5 sticky top-24 self-start max-h-[calc(100vh-8rem)] overflow-y-auto overflow-x-hidden">
           {RECEIPT_SECTIONS.map((section) => {
             const active = activeSection === section.id;
             return (
