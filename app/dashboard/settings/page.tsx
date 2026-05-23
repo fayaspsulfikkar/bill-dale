@@ -37,15 +37,15 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className="h-[calc(100vh-7.5rem)] flex flex-col space-y-6">
+      <div className="shrink-0">
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
         <p className="text-muted-foreground">Configure your POS system preferences.</p>
       </div>
 
-      <div className="flex gap-6">
+      <div className="flex gap-6 flex-1 min-h-0">
         {/* Sidebar Tabs */}
-        <div className="w-52 shrink-0 space-y-1 sticky top-6 self-start">
+        <div className="w-52 shrink-0 space-y-1 overflow-y-auto pr-2">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -67,7 +67,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Tab Content */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 overflow-y-auto pr-4 pb-12">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
