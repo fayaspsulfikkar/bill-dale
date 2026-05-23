@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
   Barcode, Printer, HelpCircle, Check, AlertTriangle, AlertCircle, 
-  RefreshCw, Power, PowerOff, Sparkles, Sliders, ChevronDown
+  RefreshCw, Power, PowerOff, Sparkles, Sliders, ChevronDown,
+  Monitor, Banknote
 } from "lucide-react";
 import { useDeviceStore } from "@/store/deviceStore";
 import { 
@@ -77,7 +78,10 @@ function ChipSelect<T extends string | number>({
 }
 
 export default function DevicesTab() {
-  const { scanner, thermal, a4, updateScanner, updateThermal, updateA4 } = useDeviceStore();
+  const { 
+    scanner, thermal, a4, cashDrawer, customerDisplay, 
+    updateScanner, updateThermal, updateA4, updateCashDrawer, updateCustomerDisplay 
+  } = useDeviceStore();
   
   const [serialSupported, setSerialSupported] = useState(false);
   const [pairedPorts, setPairedPorts] = useState<any[]>([]);
@@ -590,6 +594,96 @@ export default function DevicesTab() {
               </Button>
             </div>
 
+          </div>
+        </CardContent>
+      </Card>
+      {/* 4. CASH DRAWER SECTION */}
+      <Card className="bg-card/50 border-border/50 backdrop-blur-md overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b border-border/40">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-primary/10 rounded-xl flex items-center justify-center">
+              <Banknote className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-bold">Cash Drawer</CardTitle>
+              <CardDescription className="text-xs">Configure RJ11 drawer kick triggers</CardDescription>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => updateCashDrawer({ drawer_enabled: !cashDrawer.drawer_enabled })}
+              className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${cashDrawer.drawer_enabled ? "bg-primary" : "bg-muted"}`}
+            >
+              <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform shadow-sm ${cashDrawer.drawer_enabled ? "translate-x-5" : ""}`} />
+            </button>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6 space-y-6">
+          <div className={`space-y-6 ${!cashDrawer.drawer_enabled ? "opacity-40 pointer-events-none" : ""}`}>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <Label className="text-xs font-medium">Drawer Trigger</Label>
+                <p className="text-[11px] text-muted-foreground mb-2">When should the cash drawer pop open?</p>
+                <ChipSelect
+                  value={cashDrawer.drawer_trigger}
+                  options={[
+                    { label: "On Sale Complete", value: "sale_complete" },
+                    { label: "Manual Button Only", value: "manual" },
+                    { label: "Both", value: "both" }
+                  ]}
+                  onChange={(val) => updateCashDrawer({ drawer_trigger: val as any })}
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 5. CUSTOMER FACING DISPLAY SECTION */}
+      <Card className="bg-card/50 border-border/50 backdrop-blur-md overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b border-border/40">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-primary/10 rounded-xl flex items-center justify-center">
+              <Monitor className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-bold">Customer Facing Display (CFD)</CardTitle>
+              <CardDescription className="text-xs">Manage secondary screen for customer totals and QR</CardDescription>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => updateCustomerDisplay({ display_enabled: !customerDisplay.display_enabled })}
+              className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${customerDisplay.display_enabled ? "bg-primary" : "bg-muted"}`}
+            >
+              <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform shadow-sm ${customerDisplay.display_enabled ? "translate-x-5" : ""}`} />
+            </button>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6 space-y-6">
+          <div className={`space-y-6 ${!customerDisplay.display_enabled ? "opacity-40 pointer-events-none" : ""}`}>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <Label className="text-xs font-medium">Idle Message</Label>
+                <p className="text-[11px] text-muted-foreground mb-2">Text to show when the register is inactive</p>
+                <Input 
+                  value={customerDisplay.display_idle_msg}
+                  onChange={(e) => updateCustomerDisplay({ display_idle_msg: e.target.value })}
+                  placeholder="Welcome to our store!"
+                  className="bg-background/50 h-9"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-medium">VFD Serial Port (Legacy)</Label>
+                <p className="text-[11px] text-muted-foreground mb-2">Leave blank if using secondary web monitor</p>
+                <Input 
+                  value={customerDisplay.display_port}
+                  onChange={(e) => updateCustomerDisplay({ display_port: e.target.value })}
+                  placeholder="COM1"
+                  className="bg-background/50 h-9"
+                />
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

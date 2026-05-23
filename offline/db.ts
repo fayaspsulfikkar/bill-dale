@@ -468,6 +468,20 @@ export interface BusinessSettings {
   staff_performance_metrics?: boolean;
   staff_shift_management?: boolean;
 
+  // ── Hardware & Devices (Phase 3.4) ──
+  hardware_barcode_prefix?: string;
+  hardware_barcode_suffix?: string;
+  hardware_cash_drawer_trigger?: 'sale_complete' | 'manual' | 'both';
+  hardware_customer_display_enabled?: boolean;
+  hardware_customer_display_idle_msg?: string;
+  hardware_customer_display_port?: string;
+
+  // ── Data & Sync (Phase 3.4) ──
+  sync_auto_sync_interval?: number; // minutes
+  sync_conflict_resolution?: 'server_wins' | 'local_wins' | 'manual';
+  sync_background_sync_enabled?: boolean;
+  sync_retry_attempts?: number;
+
   // ── Payments & Gateways (Phase 4) ──
   payment_allow_split?: boolean;
   payment_allow_tips?: boolean;
