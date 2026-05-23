@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { UserRole } from '@/lib/permissions';
 
 export interface AuthUser {
   id: string;
@@ -12,7 +13,7 @@ interface AuthState {
   user: AuthUser | null;
   businessId: string | null;
   businessName: string | null;
-  role: 'admin' | 'staff' | null;
+  role: UserRole | null;
   permissions: string[];
   hasCompletedOnboarding: boolean;
   isAuthenticated: boolean;
@@ -22,7 +23,7 @@ interface AuthState {
   staffModeUnlockUntil: number | null;
   setStaffMode: (on: boolean, unlockUntil?: number | null) => void;
 
-  setSession: (user: AuthUser, businessId: string | null, businessName: string | null, role: 'admin' | 'staff' | null, permissions: string[], hasOnboarded: boolean) => void;
+  setSession: (user: AuthUser, businessId: string | null, businessName: string | null, role: UserRole | null, permissions: string[], hasOnboarded: boolean) => void;
   clearSession: () => void;
   setOnboardingComplete: (businessId: string, businessName: string) => void;
   // Legacy compat

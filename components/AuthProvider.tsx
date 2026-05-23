@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
-import { getBusinessMembership, ADMIN_PERMISSIONS, STAFF_PERMISSIONS } from "@/lib/auth";
+import { getBusinessMembership } from "@/lib/auth";
+import { isAdminLevel, ROLE_PRESETS, type UserRole } from "@/lib/permissions";
 import db from "@/offline/db";
 import type { User } from "@supabase/supabase-js";
 
@@ -167,13 +168,11 @@ async function hydrateUser(
     }
   }
 
-  const role = (membership?.role ?? (hasOnboarded ? "admin" : null)) as "admin" | "staff" | null;
-  const permissions =
-    role === "admin"
-      ? ADMIN_PERMISSIONS
-      : role === "staff"
-      ? [...STAFF_PERMISSIONS, ...(membership?.permissions ?? [])]
-      : [];
+  const role = (membership?.role ?? (hasOnboarded ? "owner" : null)) as UserRole | null;
+  const preset = role ? ROLE_PRESETS[role] : undefined;
+  const permissions = preset
+    ? [...preset, ...(membership?.permissions ?? [])]
+    : (membership?.permissions ?? []);
 
   setSession(
     {

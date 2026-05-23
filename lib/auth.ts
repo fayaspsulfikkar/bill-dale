@@ -1,17 +1,9 @@
 import { supabase } from '@/lib/supabase';
+import { ROLE_PRESETS } from '@/lib/permissions';
 
-export const ADMIN_PERMISSIONS = [
-  'can_view_dashboard',
-  'can_manage_inventory',
-  'can_view_reports',
-  'can_manage_staff',
-  'can_manage_settings',
-  'can_process_billing',
-  'can_view_activity_logs',
-  'can_manage_branches',
-];
+export const ADMIN_PERMISSIONS = [...ROLE_PRESETS.owner];
 
-export const STAFF_PERMISSIONS = ['can_process_billing'];
+export const STAFF_PERMISSIONS = [...ROLE_PRESETS.cashier];
 
 export async function signInWithGoogle() {
   if (!supabase) throw new Error('Supabase not configured');

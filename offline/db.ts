@@ -5,7 +5,7 @@ export interface User {
   email: string;
   name?: string;
   avatar_url?: string;
-  role: 'admin' | 'staff';
+  role: 'owner' | 'manager' | 'cashier' | 'inventory_staff' | 'accountant' | 'custom' | 'admin' | 'staff';
   branch_id: string | null;
   created_at: string;
 }
@@ -37,7 +37,7 @@ export interface BusinessMember {
   id: string;
   business_id: string;
   user_id: string;
-  role: 'admin' | 'staff';
+  role: 'owner' | 'manager' | 'cashier' | 'inventory_staff' | 'accountant' | 'custom' | 'admin' | 'staff';
   permissions: string[];
   joined_at: string;
 }
@@ -301,6 +301,43 @@ export interface BusinessSettings {
   notify_sync_failures?: boolean;
 
   updated_at: string;
+
+  // ── Security Settings ──
+  security_pin_length?: 4 | 6;
+  security_auto_lock_enabled?: boolean;
+  security_auto_lock_minutes?: number;
+  security_lock_on_minimize?: boolean;
+  security_lock_after_sale?: boolean;
+  security_require_pin_unlock?: boolean;
+  security_show_lock_countdown?: boolean;
+  security_failed_attempts_limit?: number;
+  security_cooldown_minutes?: number;
+  security_notify_admin_failed?: boolean;
+  security_require_admin_unlock?: boolean;
+  security_require_pin_on_open?: boolean;
+  security_require_admin_new_device?: boolean;
+  security_allow_trusted_devices_only?: boolean;
+  security_staff_branch_only?: boolean;
+  security_admin_pin_switch_branch?: boolean;
+  security_prevent_unlink_branch?: boolean;
+  security_restrict_inventory_branch?: boolean;
+  security_restrict_reports_branch?: boolean;
+  security_mask_customer_phone?: boolean;
+  security_hide_credit_balance?: boolean;
+  security_hide_profit_non_admin?: boolean;
+  security_admin_pin_export_data?: boolean;
+  security_admin_pin_clear_data?: boolean;
+  security_admin_pin_restore_backup?: boolean;
+  security_log_data_exports?: boolean;
+  security_admin_pin_critical_settings?: boolean;
+  security_admin_pin_manage_staff?: boolean;
+  security_admin_pin_tax_settings?: boolean;
+  security_admin_pin_unlink_branch?: boolean;
+  security_pin_required_actions?: string[];
+  security_discount_pin_threshold?: number;
+  security_role_permissions?: Record<string, Record<string, boolean>>;
+  security_pin_last_changed?: string;
+  security_pin_changed_by?: string;
 }
 
 export interface StockTransfer {
