@@ -178,7 +178,6 @@ function GeneralTab() {
     pos_quick_add: true,
     pos_sound_effects: true,
     staff_mode_default_minutes: 10,
-    auto_session_timeout_minutes: 0,
     low_stock_threshold: 10,
     barcode_format: "ean13" as "ean13" | "code128" | "qr",
     // Business Hours
@@ -214,7 +213,6 @@ function GeneralTab() {
         pos_quick_add: settings.pos_quick_add ?? prev.pos_quick_add,
         pos_sound_effects: settings.pos_sound_effects ?? prev.pos_sound_effects,
         staff_mode_default_minutes: settings.staff_mode_default_minutes ?? prev.staff_mode_default_minutes,
-        auto_session_timeout_minutes: settings.auto_session_timeout_minutes ?? prev.auto_session_timeout_minutes,
         low_stock_threshold: settings.low_stock_threshold ?? prev.low_stock_threshold,
         barcode_format: settings.barcode_format || prev.barcode_format,
         business_hours_open: settings.business_hours_open || prev.business_hours_open,
@@ -391,11 +389,6 @@ function GeneralTab() {
                 { label: "30m", value: 30 }, { label: "1hr", value: 60 },
               ]} onChange={v => u({ staff_mode_default_minutes: v })} />
               <p className="text-xs text-muted-foreground">Pre-selected unlock duration in PIN dialog.</p>
-            </div>
-            <div className="space-y-2">
-              <Label>Auto-Lock Timeout (min)</Label>
-              <Input type="number" min="0" value={form.auto_session_timeout_minutes} onChange={e => u({ auto_session_timeout_minutes: Number(e.target.value) })} className="max-w-[120px]" />
-              <p className="text-xs text-muted-foreground">0 = disabled. Re-enables staff mode lock after inactivity.</p>
             </div>
           </div>
           <div className="space-y-4 pt-2 border-t border-border/50">
