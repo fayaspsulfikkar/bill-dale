@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Eye, EyeOff, X } from "lucide-react";
+import { Check, Eye, EyeOff, X, Maximize2, Minimize2 } from "lucide-react";
 import { useReceiptSettings } from "@/hooks/useReceiptSettings";
 import { RECEIPT_SECTIONS } from "./receipt-constants";
 import BusinessInfoSection from "./BusinessInfoSection";
@@ -25,6 +25,7 @@ export default function ReceiptsTab() {
 
   const [activeSection, setActiveSection] = useState("business");
   const [showPreview, setShowPreview] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const renderSection = () => {
     switch (activeSection) {
@@ -133,7 +134,7 @@ export default function ReceiptsTab() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 26, stiffness: 300 }}
-              className="fixed top-0 right-0 h-full w-[380px] z-50 flex flex-col bg-card border-l border-border shadow-2xl"
+              className={`fixed top-0 right-0 h-full z-50 flex flex-col bg-card border-l border-border shadow-2xl transition-all duration-300 ${isExpanded ? "w-[850px]" : "w-[380px]"}`}
             >
               {/* Drawer Header */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
@@ -142,12 +143,24 @@ export default function ReceiptsTab() {
                   <span className="text-sm font-semibold">Live Preview</span>
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                 </div>
-                <button
-                  onClick={() => setShowPreview(false)}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                    title={isExpanded ? "Minimize" : "Expand Details"}
+                  >
+                    {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowPreview(false);
+                      setIsExpanded(false);
+                    }}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               {/* Paper size pill */}
@@ -159,7 +172,7 @@ export default function ReceiptsTab() {
 
               {/* Scrollable Preview */}
               <div className="flex-1 overflow-y-auto px-5 py-4">
-                <ReceiptPreview form={form} />
+                <ReceiptPreview form={form} isExpanded={isExpanded} />
               </div>
             </motion.div>
           </>

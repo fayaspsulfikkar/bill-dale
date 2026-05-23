@@ -8,6 +8,7 @@ import { PrintA4Invoice } from "@/components/pos/PrintA4Invoice";
 
 interface Props {
   form: ReceiptSettingsSnapshot;
+  isExpanded?: boolean;
 }
 
 function getDividerCSS(style: DividerStyle = "dashed"): React.CSSProperties {
@@ -29,7 +30,7 @@ function maskPhone(phone: string): string {
   return `${first5} ${"*".repeat(Math.max(2, cleaned.length - 8))} ${last3}`;
 }
 
-export default function ReceiptPreview({ form }: Props) {
+export default function ReceiptPreview({ form, isExpanded }: Props) {
   const paperWidth = form.receipt_paper_size === "58mm" ? 216 : 302; // px approximations
   const fontSize = `${form.receipt_font_size || 9}pt`;
   const lineHeight = form.receipt_line_spacing || 1.4;
@@ -58,22 +59,30 @@ export default function ReceiptPreview({ form }: Props) {
   const timeStr = format(new Date(MOCK_INVOICE.created_at), "HH:mm:ss");
 
   if (form.receipt_paper_size === "A4") {
+    const scale = isExpanded ? 1.0 : 0.403;
+    const containerWidth = isExpanded ? "794px" : "320px";
+    const containerHeight = isExpanded ? "1123px" : "450px"; // 1123 is 297mm at 96dpi
+
     return (
       <div className="flex flex-col items-center pb-4">
-        <div className="text-[10px] text-muted-foreground mb-3 font-mono bg-muted/50 px-2 py-0.5 rounded">
-          A4 Preview (Scaled 40%)
+        <div className="text-[10px] text-muted-foreground mb-3 font-mono bg-muted/50 px-2 py-0.5 rounded transition-all">
+          A4 Preview ({isExpanded ? '100% Scale' : 'Scaled 40%'})
         </div>
         
         {/* Container matches the scaled height to avoid huge blank scroll space */}
-        <div className="relative bg-white shadow-xl border border-border/50 overflow-hidden" style={{ width: "320px", height: "450px" }}>
+        <div 
+          className="relative bg-white shadow-xl border border-border/50 overflow-hidden transition-all duration-300" 
+          style={{ width: containerWidth, height: containerHeight }}
+        >
           <div style={{
             position: "absolute",
             top: 0,
             left: 0,
             width: "794px", // 210mm at 96dpi
-            transform: "scale(0.403)", // 320 / 794
+            transform: `scale(${scale})`,
             transformOrigin: "top left",
             pointerEvents: "none",
+            transition: "transform 0.3s ease",
           }}>
             <PrintA4Invoice
               invoice={{ ...MOCK_INVOICE, customer_id: 'walk-in' } as any}
