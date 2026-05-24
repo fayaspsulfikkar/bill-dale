@@ -26,9 +26,13 @@ async function pushSyncQueue() {
       const { table_name, operation, data } = item;
 
       if (operation === "INSERT" || operation === "UPDATE") {
+        // Strip the local 'synced' flag before uploading to Supabase
+        const payload = { ...data };
+        delete (payload as any).synced;
+
         const { error } = await client
           .from(table_name)
-          .upsert(data as any);
+          .upsert(payload as any);
 
         if (error) {
           console.error(`[useDataSync] Failed to upsert to ${table_name}:`, error);
