@@ -35,7 +35,17 @@ export default function RootLayout({
       <body suppressHydrationWarning className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeInitializer />
         <AuthProvider>{children}</AuthProvider>
-        <Toaster theme="dark" position="bottom-right" richColors closeButton visibleToasts={15} />
+        <Toaster 
+          theme="dark" 
+          position="bottom-right" 
+          richColors 
+          closeButton 
+          expand={true}
+          visibleToasts={6}
+          toastOptions={{
+            style: { padding: '12px', fontSize: '13px' }
+          }}
+        />
         <Analytics />
       </body>
     </html>
