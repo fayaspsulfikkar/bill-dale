@@ -114,7 +114,7 @@ export default function SyncTab() {
               <Clock className="w-5 h-5 text-muted-foreground" />
               <div>
                 <p className="text-sm font-medium">
-                  {lastSyncedAt ? formatDistanceToNow(new Date(lastSyncedAt), { addSuffix: true }) : "Never synced"}
+                  {lastSyncedAt && lastSyncedAt !== "undefined" && !isNaN(new Date(lastSyncedAt).getTime()) ? formatDistanceToNow(new Date(lastSyncedAt), { addSuffix: true }) : "Never synced"}
                 </p>
                 <p className="text-xs text-muted-foreground">Auto-syncs every 5 minutes</p>
               </div>
