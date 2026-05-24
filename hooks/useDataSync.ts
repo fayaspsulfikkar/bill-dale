@@ -162,10 +162,14 @@ async function runSync(businessId: string) {
 export function useDataSync() {
   const { businessId } = useAuthStore();
   const [isSyncing, setIsSyncing] = useState(false);
-  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(
-    typeof window !== "undefined" ? localStorage.getItem("lastSyncedAt") : null
-  );
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setLastSyncedAt(localStorage.getItem("lastSyncedAt"));
+    }
+  }, []);
 
   const sync = useCallback(async () => {
     if (!businessId || !supabase || isSyncing) return;

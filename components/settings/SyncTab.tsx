@@ -48,7 +48,7 @@ function ChipSelect<T extends string | number>({ value, options, onChange }: { v
 export default function SyncTab() {
   const { isSyncing, lastSyncedAt, forceSync } = useDataSync();
   const { form, u } = useBusinessSettings();
-  const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
+  const [isOnline, setIsOnline] = useState(true);
   const [storageUsed, setStorageUsed] = useState<string | null>(null);
   const [storageQuota, setStorageQuota] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
@@ -60,6 +60,9 @@ export default function SyncTab() {
   }, [syncQueueCount]);
 
   useEffect(() => {
+    if (typeof navigator !== "undefined") {
+      setIsOnline(navigator.onLine);
+    }
     const on = () => setIsOnline(true);
     const off = () => setIsOnline(false);
     window.addEventListener("online", on);
