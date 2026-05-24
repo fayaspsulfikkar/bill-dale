@@ -10,6 +10,7 @@ import { formatDistanceToNow } from "date-fns";
 import db from "@/offline/db";
 import { Label } from "@/components/ui/label";
 import { useAuthStore } from "@/store/authStore";
+import { useBusinessSettings } from "@/hooks/useBusinessSettings";
 
 function ToggleRow({ label, desc, value, onChange }: { label: string; desc: string; value: boolean; onChange: () => void }) {
   return (
