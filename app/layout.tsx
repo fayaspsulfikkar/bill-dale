@@ -35,7 +35,7 @@ export default function RootLayout({
       <body suppressHydrationWarning className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeInitializer />
         <AuthProvider>{children}</AuthProvider>
-        <Toaster theme="dark" position="bottom-right" />
+        <Toaster theme="dark" position="bottom-right" richColors closeButton />
         <Analytics />
       </body>
     </html>

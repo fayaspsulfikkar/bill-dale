@@ -32,7 +32,10 @@ async function pushSyncQueue() {
 
         if (error) {
           console.error(`[useDataSync] Failed to upsert to ${table_name}:`, error);
-          toast.error(`Sync failed for ${table_name}: ${error.message}`);
+          toast.error(`Sync failed for ${table_name}: ${error.message}`, {
+            duration: 60000, // 60 seconds
+            id: `sync-err-${table_name}`, // Deduplicate
+          });
         } else {
           success = true;
         }
