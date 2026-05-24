@@ -72,7 +72,7 @@ function ChipSelect<T extends string | number>({ value, options, onChange }: { v
 
 export default function GeneralTab() {
   const router = useRouter();
-  const { form, u } = useBusinessSettings();
+  const { form, u, saving, saved } = useBusinessSettings();
 
   return (
     <div className="space-y-6 relative">
