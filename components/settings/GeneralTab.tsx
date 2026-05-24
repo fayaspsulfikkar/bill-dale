@@ -1,16 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useLiveQuery } from "dexie-react-hooks";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Store, ChevronRight, Settings2, FileText, Clock, Check } from "lucide-react";
-import { useAuthStore } from "@/store/authStore";
-import { supabase } from "@/lib/supabase";
-import db from "@/offline/db";
 import { motion, AnimatePresence } from "framer-motion";
+import { useBusinessSettings } from "@/hooks/useBusinessSettings";
 
 const CURRENCIES = [
   { code: "INR", symbol: "₹", name: "Indian Rupee",       flag: "🇮🇳" },
@@ -76,140 +72,7 @@ function ChipSelect<T extends string | number>({ value, options, onChange }: { v
 
 export default function GeneralTab() {
   const router = useRouter();
-  const { businessId } = useAuthStore();
-
-  const settings = useLiveQuery(
-    () => businessId ? db.business_settings.where("business_id").equals(businessId).first() : undefined,
-    [businessId]
-  );
-
-  const [form, setForm] = useState({
-    // Currency & Formatting
-    currency_code: "INR",
-    currency_symbol: "₹",
-    date_format: "DD/MM/YYYY" as "DD/MM/YYYY" | "MM/DD/YYYY" | "YYYY-MM-DD",
-    time_format: "12h" as "12h" | "24h",
-    decimal_places: 2,
-    // Tax & Invoicing
-    default_gst_rate: 18,
-    invoice_prefix: "INV-",
-    invoice_start_number: 1,
-    invoice_number_padding: 4,
-    invoice_reset_cycle: "never" as "never" | "monthly" | "yearly",
-    tax_inclusive_pricing: false,
-    return_invoice_templates: false,
-    // POS Behavior
-    default_payment_method: "cash" as "cash" | "card" | "upi",
-    pos_quick_add: true,
-    pos_sound_effects: true,
-    staff_mode_default_minutes: 10,
-    low_stock_threshold: 10,
-    barcode_format: "ean13" as "ean13" | "code128" | "qr",
-    pos_auto_cart_recovery: true,
-    pos_auto_print_receipt: true,
-    pos_barcode_autofocus: true,
-    pos_session_persistence: true,
-    // Business Hours
-    business_hours_open: "09:00",
-    business_hours_close: "21:00",
-    business_days: ["mon", "tue", "wed", "thu", "fri", "sat"] as string[],
-    business_timezone: "Asia/Kolkata",
-    business_multi_branch_enabled: false,
-    business_multi_language: "en",
-    // Notifications
-    notify_low_stock: true,
-    notify_daily_summary: true,
-    notify_sync_failures: true,
-  });
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isHydrating = useRef(true); // true = form update came from settings, not user
-
-  useEffect(() => {
-    if (settings) {
-      // Mark as hydrating so auto-save skips this form update
-      isHydrating.current = true;
-      setForm(prev => ({
-        ...prev,
-        currency_code: settings.currency_code || prev.currency_code,
-        currency_symbol: settings.currency_symbol || prev.currency_symbol,
-        date_format: settings.date_format || prev.date_format,
-        time_format: settings.time_format || prev.time_format,
-        decimal_places: settings.decimal_places ?? prev.decimal_places,
-        default_gst_rate: settings.default_gst_rate ?? prev.default_gst_rate,
-        invoice_prefix: settings.invoice_prefix ?? prev.invoice_prefix,
-        invoice_start_number: settings.invoice_start_number ?? prev.invoice_start_number,
-        invoice_number_padding: settings.invoice_number_padding ?? prev.invoice_number_padding,
-        invoice_reset_cycle: settings.invoice_reset_cycle || prev.invoice_reset_cycle,
-        tax_inclusive_pricing: settings.tax_inclusive_pricing ?? prev.tax_inclusive_pricing,
-        return_invoice_templates: settings.return_invoice_templates ?? prev.return_invoice_templates,
-        default_payment_method: settings.default_payment_method || prev.default_payment_method,
-        pos_quick_add: settings.pos_quick_add ?? prev.pos_quick_add,
-        pos_sound_effects: settings.pos_sound_effects ?? prev.pos_sound_effects,
-        staff_mode_default_minutes: settings.staff_mode_default_minutes ?? prev.staff_mode_default_minutes,
-        low_stock_threshold: settings.low_stock_threshold ?? prev.low_stock_threshold,
-        barcode_format: settings.barcode_format || prev.barcode_format,
-        pos_auto_cart_recovery: settings.pos_auto_cart_recovery ?? prev.pos_auto_cart_recovery,
-        pos_auto_print_receipt: settings.pos_auto_print_receipt ?? prev.pos_auto_print_receipt,
-        pos_barcode_autofocus: settings.pos_barcode_autofocus ?? prev.pos_barcode_autofocus,
-        pos_session_persistence: settings.pos_session_persistence ?? prev.pos_session_persistence,
-        business_hours_open: settings.business_hours_open || prev.business_hours_open,
-        business_hours_close: settings.business_hours_close || prev.business_hours_close,
-        business_days: settings.business_days || prev.business_days,
-        business_timezone: settings.business_timezone || prev.business_timezone,
-        business_multi_branch_enabled: settings.business_multi_branch_enabled ?? prev.business_multi_branch_enabled,
-        business_multi_language: settings.business_multi_language || prev.business_multi_language,
-        notify_low_stock: settings.notify_low_stock ?? prev.notify_low_stock,
-        notify_daily_summary: settings.notify_daily_summary ?? prev.notify_daily_summary,
-        notify_sync_failures: settings.notify_sync_failures ?? prev.notify_sync_failures,
-      }));
-    }
-  }, [settings]);
-
-  // Auto-save with debounce whenever form changes
-  const doSave = useCallback(async (data: typeof form) => {
-    if (!businessId) return;
-    setSaving(true);
-    try {
-      const record = {
-        id: settings?.id || crypto.randomUUID(),
-        business_id: businessId,
-        ...(settings || {}),
-        ...data,
-        updated_at: new Date().toISOString(),
-      } as any;
-      await db.business_settings.put(record);
-      if (supabase) {
-        await supabase.from("business_settings").upsert(record);
-      }
-      const { invalidateCurrencyCache } = await import("@/lib/formatCurrency");
-      invalidateCurrencyCache(data.currency_code, data.decimal_places);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    } finally {
-      setSaving(false);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [businessId, settings?.id]);
-
-  useEffect(() => {
-    // Skip when form was updated by settings hydration (not user action)
-    if (isHydrating.current) {
-      isHydrating.current = false;
-      return;
-    }
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => doSave(form), 600);
-    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form]);
-
-  // User-initiated change helper — clears the hydration flag
-  const u = (patch: Partial<typeof form>) => {
-    isHydrating.current = false;
-    setForm(prev => ({ ...prev, ...patch }));
-  };
+  const { form, u } = useBusinessSettings();
 
   return (
     <div className="space-y-6 relative">

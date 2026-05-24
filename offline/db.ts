@@ -486,10 +486,6 @@ export interface BusinessSettings {
   payment_allow_split?: boolean;
   payment_allow_tips?: boolean;
   payment_auto_refunds?: boolean;
-  payment_gateway_stripe_enabled?: boolean;
-  payment_gateway_stripe_key?: string;
-  payment_gateway_razorpay_enabled?: boolean;
-  payment_gateway_razorpay_key?: string;
 
   // ── Advanced Inventory Rules (Phase 4) ──
   inventory_expiry_tracking?: boolean;
@@ -512,12 +508,7 @@ export interface BusinessSettings {
   notification_sms_provider?: 'twilio' | 'msg91';
   notification_api_keys?: Record<string, string>;
 
-  // ── Third-Party Integrations (Phase 4) ──
-  integration_shopify_enabled?: boolean;
-  integration_woocommerce_enabled?: boolean;
-  integration_tally_sync?: boolean;
-  integration_zoho_sync?: boolean;
-  integration_webhooks?: Array<{ url: string; events: string[] }>;
+
 
   // ── AI & Automation (Phase 4) ──
   ai_stock_forecasting?: boolean;

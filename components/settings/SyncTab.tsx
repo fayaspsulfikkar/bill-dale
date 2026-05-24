@@ -47,24 +47,11 @@ function ChipSelect<T extends string | number>({ value, options, onChange }: { v
 
 export default function SyncTab() {
   const { isSyncing, lastSyncedAt, forceSync } = useDataSync();
-  const { businessId } = useAuthStore();
+  const { form, u } = useBusinessSettings();
   const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
   const [storageUsed, setStorageUsed] = useState<string | null>(null);
   const [storageQuota, setStorageQuota] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
-
-  const settings = useLiveQuery(
-    () => businessId ? db.business_settings.where("business_id").equals(businessId).first() : undefined,
-    [businessId]
-  );
-
-  const updateSetting = async (key: string, value: any) => {
-    if (!businessId || !settings?.id) return;
-    await db.business_settings.update(settings.id, {
-      [key]: value,
-      updated_at: new Date().toISOString()
-    });
-  };
 
   const syncQueueCount = useLiveQuery(() => db.sync_queue.count(), []);
 
@@ -161,7 +148,7 @@ export default function SyncTab() {
           <Label className="text-sm font-semibold">Auto-Sync Frequency</Label>
           <p className="text-xs text-muted-foreground mb-2">How often should background data synchronize with the server?</p>
           <ChipSelect
-            value={settings?.sync_auto_sync_interval ?? 5}
+            value={form.sync_auto_sync_interval ?? 5}
             options={[
               { label: "Real-time (1 min)", value: 1 },
               { label: "Fast (5 mins)", value: 5 },
@@ -169,7 +156,7 @@ export default function SyncTab() {
               { label: "Slow (60 mins)", value: 60 },
               { label: "Manual Only", value: 0 }
             ]}
-            onChange={(val) => updateSetting('sync_auto_sync_interval', val)}
+            onChange={(val) => u({ sync_auto_sync_interval: val as number })}
           />
         </div>
 
@@ -177,13 +164,13 @@ export default function SyncTab() {
           <Label className="text-sm font-semibold">Conflict Resolution Policy</Label>
           <p className="text-xs text-muted-foreground mb-2">What happens when an offline edit conflicts with cloud data?</p>
           <ChipSelect
-            value={settings?.sync_conflict_resolution ?? 'server_wins'}
+            value={form.sync_conflict_resolution ?? 'server_wins'}
             options={[
               { label: "Server Wins (Safe)", value: 'server_wins' },
               { label: "Local Wins (Overwrite)", value: 'local_wins' },
               { label: "Manual Resolve (Prompt)", value: 'manual' }
             ]}
-            onChange={(val) => updateSetting('sync_conflict_resolution', val)}
+            onChange={(val) => u({ sync_conflict_resolution: val as any })}
           />
         </div>
 
@@ -191,8 +178,8 @@ export default function SyncTab() {
           <ToggleRow
             label="Background Sync via Service Worker"
             desc="Enable silent syncs even when the POS tab is closed (requires PWA)."
-            value={settings?.sync_background_sync_enabled ?? true}
-            onChange={() => updateSetting('sync_background_sync_enabled', !(settings?.sync_background_sync_enabled ?? true))}
+            value={form.sync_background_sync_enabled ?? true}
+            onChange={() => u({ sync_background_sync_enabled: !(form.sync_background_sync_enabled ?? true) })}
           />
         </div>
 
@@ -200,14 +187,14 @@ export default function SyncTab() {
           <Label className="text-sm font-semibold">Max Retry Attempts</Label>
           <p className="text-xs text-muted-foreground mb-2">How many times should failed sync requests be retried?</p>
           <ChipSelect
-            value={settings?.sync_retry_attempts ?? 3}
+            value={form.sync_retry_attempts ?? 3}
             options={[
               { label: "1 Attempt", value: 1 },
               { label: "3 Attempts", value: 3 },
               { label: "5 Attempts", value: 5 },
               { label: "Infinite", value: 0 }
             ]}
-            onChange={(val) => updateSetting('sync_retry_attempts', val)}
+            onChange={(val) => u({ sync_retry_attempts: val as number })}
           />
         </div>
       </div>

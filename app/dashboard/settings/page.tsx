@@ -15,6 +15,10 @@ import SecurityTab from "@/components/settings/SecurityTab";
 import ReceiptsTab from "@/components/settings/receipts/ReceiptsTab";
 import DevicesTab from "@/components/settings/DevicesTab";
 import SyncTab from "@/components/settings/SyncTab";
+import UsersTab from "@/components/settings/UsersTab";
+import PaymentsTab from "@/components/settings/PaymentsTab";
+import InventoryTab from "@/components/settings/InventoryTab";
+import CustomersTab from "@/components/settings/CustomersTab";
 
 type SettingsTab =
   | "general" | "security" | "users" | "payments" | "receipts"
@@ -46,7 +50,6 @@ const TAB_GROUPS = [
     title: "Extensions",
     tabs: [
       { id: "notifications", label: "Notifications", icon: Bell, keywords: "email whatsapp push alerts reports sms" },
-      { id: "integrations", label: "Integrations", icon: Plug, keywords: "shopify woocommerce tally zoho webhooks api" },
       { id: "ai", label: "AI & Automation", icon: Sparkles, keywords: "smart forecasting prediction fraud behavior assistant" },
     ]
   },
@@ -178,14 +181,13 @@ export default function SettingsPage() {
               {activeTab === "receipts" && <ReceiptsTab />}
               {activeTab === "devices" && <DevicesTab />}
               {activeTab === "sync" && <SyncTab />}
+              {activeTab === "users" && <UsersTab />}
+              {activeTab === "payments" && <PaymentsTab />}
+              {activeTab === "inventory" && <InventoryTab />}
+              {activeTab === "customers" && <CustomersTab />}
               
               {/* New Module Placeholders */}
-              {activeTab === "users" && <PlaceholderTab title="Users & Staff Management" />}
-              {activeTab === "payments" && <PlaceholderTab title="Payments & Gateways" />}
-              {activeTab === "inventory" && <PlaceholderTab title="Advanced Inventory Rules" />}
-              {activeTab === "customers" && <PlaceholderTab title="Customers & Loyalty Engine" />}
               {activeTab === "notifications" && <PlaceholderTab title="Notification Center" />}
-              {activeTab === "integrations" && <PlaceholderTab title="Third-Party Integrations" />}
               {activeTab === "ai" && <PlaceholderTab title="AI & Automation" />}
               {activeTab === "appearance" && <PlaceholderTab title="Appearance & Branding" />}
               {activeTab === "advanced" && <PlaceholderTab title="Advanced Diagnostics" />}
