@@ -71,6 +71,31 @@ export const BUSINESS_SETTINGS_DEFAULTS: Partial<BusinessSettings> = {
   loyalty_enable_store_credits: true,
   loyalty_enable_referrals: false,
 
+  // Phase 4.2 Notifications
+  notification_email_provider: "smtp",
+  notification_whatsapp_provider: "meta",
+  notification_sms_provider: "msg91",
+  notification_api_keys: {},
+
+  // Phase 4.3 AI & Automation
+  ai_stock_forecasting: false,
+  ai_demand_prediction: false,
+  ai_fraud_detection: true,
+  ai_customer_behavior_analysis: false,
+  ai_smart_reorder_suggestions: false,
+
+  // Phase 4.3 Appearance
+  appearance_theme: "system",
+  appearance_accent_color: "blue",
+  appearance_compact_mode: false,
+  appearance_dashboard_layout: "standard",
+
+  // Phase 4.3 Advanced
+  advanced_developer_mode: false,
+  advanced_api_management: false,
+  advanced_performance_analytics: true,
+  advanced_experimental_features: false,
+
   // Sync / Data
   sync_auto_sync_interval: 5,
   sync_conflict_resolution: "server_wins",

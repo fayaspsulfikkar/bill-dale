@@ -19,6 +19,10 @@ import UsersTab from "@/components/settings/UsersTab";
 import PaymentsTab from "@/components/settings/PaymentsTab";
 import InventoryTab from "@/components/settings/InventoryTab";
 import CustomersTab from "@/components/settings/CustomersTab";
+import NotificationsTab from "@/components/settings/NotificationsTab";
+import AITab from "@/components/settings/AITab";
+import AppearanceTab from "@/components/settings/AppearanceTab";
+import AdvancedTab from "@/components/settings/AdvancedTab";
 
 type SettingsTab =
   | "general" | "security" | "users" | "payments" | "receipts"
@@ -186,11 +190,10 @@ export default function SettingsPage() {
               {activeTab === "inventory" && <InventoryTab />}
               {activeTab === "customers" && <CustomersTab />}
               
-              {/* New Module Placeholders */}
-              {activeTab === "notifications" && <PlaceholderTab title="Notification Center" />}
-              {activeTab === "ai" && <PlaceholderTab title="AI & Automation" />}
-              {activeTab === "appearance" && <PlaceholderTab title="Appearance & Branding" />}
-              {activeTab === "advanced" && <PlaceholderTab title="Advanced Diagnostics" />}
+              {activeTab === "notifications" && <NotificationsTab />}
+              {activeTab === "ai" && <AITab />}
+              {activeTab === "appearance" && <AppearanceTab />}
+              {activeTab === "advanced" && <AdvancedTab />}
             </motion.div>
           </AnimatePresence>
         </div>
