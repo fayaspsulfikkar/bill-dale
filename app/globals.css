@@ -119,6 +119,56 @@
   --sidebar-ring: oklch(0.6 0.15 260);
 }
 
+/* --- Accent Themes --- */
+
+/* Zinc */
+.theme-zinc {
+  --primary: oklch(0.25 0.02 260);
+  --primary-foreground: oklch(0.98 0 0);
+  --ring: oklch(0.25 0.02 260);
+}
+.dark.theme-zinc, .theme-zinc.dark {
+  --primary: oklch(0.98 0.01 260);
+  --primary-foreground: oklch(0.1 0 0);
+  --ring: oklch(0.98 0.01 260);
+}
+
+/* Rose */
+.theme-rose {
+  --primary: oklch(0.55 0.2 15);
+  --primary-foreground: oklch(0.98 0 0);
+  --ring: oklch(0.55 0.2 15);
+}
+.dark.theme-rose, .theme-rose.dark {
+  --primary: oklch(0.65 0.2 15);
+  --primary-foreground: oklch(0.1 0 0);
+  --ring: oklch(0.65 0.2 15);
+}
+
+/* Green */
+.theme-green {
+  --primary: oklch(0.5 0.15 150);
+  --primary-foreground: oklch(0.98 0 0);
+  --ring: oklch(0.5 0.15 150);
+}
+.dark.theme-green, .theme-green.dark {
+  --primary: oklch(0.65 0.15 150);
+  --primary-foreground: oklch(0.1 0 0);
+  --ring: oklch(0.65 0.15 150);
+}
+
+/* Orange */
+.theme-orange {
+  --primary: oklch(0.6 0.18 45);
+  --primary-foreground: oklch(0.98 0 0);
+  --ring: oklch(0.6 0.18 45);
+}
+.dark.theme-orange, .theme-orange.dark {
+  --primary: oklch(0.7 0.18 45);
+  --primary-foreground: oklch(0.1 0 0);
+  --ring: oklch(0.7 0.18 45);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

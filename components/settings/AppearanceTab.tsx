@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Palette, Moon, LayoutDashboard, Type } from "lucide-react";
 import { useBusinessSettings } from "@/hooks/useBusinessSettings";
+import { useThemeStore } from "@/store/themeStore";
 
 function ToggleRow({ label, desc, value, onChange }: { label: string; desc: string; value: boolean; onChange: () => void }) {
   return (
@@ -71,7 +72,10 @@ export default function AppearanceTab() {
                   { label: "Light Mode", value: 'light' },
                   { label: "Dark Mode", value: 'dark' }
                 ]}
-                onChange={(val) => u({ appearance_theme: val as any })}
+                onChange={(val) => {
+                  u({ appearance_theme: val as any });
+                  useThemeStore.getState().setTheme(val as any);
+                }}
               />
             </div>
 
@@ -88,7 +92,10 @@ export default function AppearanceTab() {
                   { label: "Green", value: 'green' },
                   { label: "Orange", value: 'orange' }
                 ]}
-                onChange={(val) => u({ appearance_accent_color: val as string })}
+                onChange={(val) => {
+                  u({ appearance_accent_color: val as string });
+                  useThemeStore.getState().setAccent(val as any);
+                }}
               />
             </div>
             
