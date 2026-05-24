@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { toast } from "sonner";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
 import db from "@/offline/db";
@@ -31,6 +32,7 @@ async function pushSyncQueue() {
 
         if (error) {
           console.error(`[useDataSync] Failed to upsert to ${table_name}:`, error);
+          toast.error(`Sync failed for ${table_name}: ${error.message}`);
         } else {
           success = true;
         }
