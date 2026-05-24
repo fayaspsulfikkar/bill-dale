@@ -30,7 +30,6 @@ import { LoyaltyPanel } from "@/components/pos/LoyaltyPanel";
 import { TaxBreakdown } from "@/components/pos/TaxBreakdown";
 import { generateInvoiceNumber } from "@/lib/invoiceNumber";
 import { formatINR } from "@/lib/formatCurrency";
-import { useDataSync } from "@/hooks/useDataSync";
 import { useCurrencyVersion } from "@/components/CurrencyRefreshBoundary";
 import { useDeviceStore } from "@/store/deviceStore";
 import { initScannerDetector } from "@/lib/devices/scannerDetector";

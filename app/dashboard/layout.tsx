@@ -2,10 +2,12 @@ import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { NotificationBell } from "@/components/NotificationBell";
 import { BranchLoginModal } from "@/components/pos/BranchLoginModal";
 import { CurrencyRefreshBoundary } from "@/components/CurrencyRefreshBoundary";
+import { GlobalSync } from "@/components/GlobalSync";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen overflow-hidden relative">
+      <GlobalSync />
       {/* Global Terminal Lock Modal */}
       <div className="z-50">
         <BranchLoginModal />
