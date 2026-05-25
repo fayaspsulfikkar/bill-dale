@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import db from "@/offline/db";
+import { useBranches } from "@/lib/api/queries";
 import { useAuthStore } from "@/store/authStore";
 import { usePOSStore } from "@/store/posStore";
 import { AdminPinDialog } from "@/components/AdminPinDialog";
@@ -18,8 +17,8 @@ interface BranchFilterChipProps {
 }
 
 export function BranchFilterChip({ value, onChange }: BranchFilterChipProps) {
-  const branches = useLiveQuery(() => db.branches.toArray(), []) || [];
   const { businessId } = useAuthStore();
+  const { data: branches = [] } = useBranches(businessId || null);
   const { selectedBranchId } = usePOSStore();
   const requiresPin = useActionRequiresPin("switch_branch");
   

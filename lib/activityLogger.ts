@@ -1,4 +1,4 @@
-import db from '@/offline/db';
+
 import { supabase } from '@/lib/supabase';
 
 export async function logActivity(
@@ -18,10 +18,8 @@ export async function logActivity(
       synced: false,
     };
 
-    await db.activity_logs.add(log);
-
     if (supabase) {
-      const { error } = await supabase.from('activity_logs').insert({
+      await supabase.from('activity_logs').insert({
         id: log.id,
         business_id: log.business_id,
         user_id: log.user_id,
@@ -29,9 +27,6 @@ export async function logActivity(
         details: log.details,
         created_at: log.created_at,
       });
-      if (!error) {
-        await db.activity_logs.update(log.id, { synced: true });
-      }
     }
   } catch (err) {
     // Non-critical — never throw from logger

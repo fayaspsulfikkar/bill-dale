@@ -1,4 +1,4 @@
-import { Invoice } from "@/offline/db";
+import { Invoice } from "@/lib/types";
 import { format } from "date-fns";
 import type { ReceiptSettingsSnapshot } from "../settings/receipts/receipt-types";
 

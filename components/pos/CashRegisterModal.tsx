@@ -1,8 +1,28 @@
 "use client";
 
-import { useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import db, { type CashRegister } from "@/offline/db";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+
+export interface CashRegister {
+  id: string;
+  branch_id: string;
+  business_id: string;
+  opened_by: string;
+  date: string;
+  opening_balance: number;
+  cash_in: number;
+  cash_out: number;
+  cash_sales: number;
+  cash_refunds: number;
+  status: "open" | "closed";
+  opened_at: string;
+  notes?: string;
+  closing_balance?: number;
+  expected_cash?: number;
+  difference?: number;
+  closed_by?: string;
+  closed_at?: string;
+}
 import { useAuthStore } from "@/store/authStore";
 import { usePOSStore } from "@/store/posStore";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -15,7 +35,7 @@ import { Wallet, Lock, Unlock, TrendingUp, TrendingDown } from "lucide-react";
 
 export function CashRegisterModal() {
   const { businessId, user } = useAuthStore();
-  const { showCashRegister, setShowCashRegister, activeCashRegister, setActiveCashRegister } = usePOSStore();
+  const { showCashRegister, setShowCashRegister, activeCashRegister, setActiveCashRegister, selectedBranchId } = usePOSStore();
 
   const [openingBalance, setOpeningBalance] = useState<number | "">("");
   const [closingBalance, setClosingBalance] = useState<number | "">("");
@@ -24,12 +44,13 @@ export function CashRegisterModal() {
 
   const today = format(new Date(), "yyyy-MM-dd");
 
-  const existingRegister = useLiveQuery(
-    () => businessId
-      ? db.cash_registers.where({ branch_id: businessId, date: today }).first()
-      : undefined,
-    [businessId, today]
-  );
+  const [existingRegister, setExistingRegister] = useState<CashRegister | undefined>(undefined);
+  useEffect(() => {
+    if (!businessId) return;
+    supabase.from('cash_registers').select('*').eq('branch_id', businessId).eq('date', today).single().then(({ data }) => {
+      if (data) setExistingRegister(data);
+    });
+  }, [businessId, today]);
 
   const register = activeCashRegister ?? existingRegister;
 
@@ -39,7 +60,7 @@ export function CashRegisterModal() {
     try {
       const newRegister: CashRegister = {
         id: crypto.randomUUID(),
-        branch_id: businessId,
+        branch_id: selectedBranchId || businessId,
         business_id: businessId,
         opened_by: user.id,
         date: today,
@@ -52,7 +73,7 @@ export function CashRegisterModal() {
         opened_at: new Date().toISOString(),
         notes: notes.trim() || undefined,
       };
-      await db.cash_registers.add(newRegister);
+      await supabase.from('cash_registers').insert(newRegister);
       setActiveCashRegister(newRegister);
       setOpeningBalance("");
       setNotes("");
@@ -69,14 +90,14 @@ export function CashRegisterModal() {
       const difference = Number(closingBalance) - expectedCash;
       const timestamp = new Date().toISOString();
 
-      await db.cash_registers.update(register.id, {
+      await supabase.from('cash_registers').update({
         status: "closed",
         closing_balance: Number(closingBalance),
         expected_cash: expectedCash,
         difference,
         closed_by: user?.id,
         closed_at: timestamp,
-      });
+      }).eq('id', register.id);
 
       setActiveCashRegister(null);
       setClosingBalance("");

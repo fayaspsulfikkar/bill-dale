@@ -1,4 +1,4 @@
-import db from '@/offline/db';
+import { supabase } from '@/lib/supabase';
 
 // ── Currency locale map ──────────────────────────────────────
 const CURRENCY_LOCALE_MAP: Record<string, string> = {
@@ -17,11 +17,11 @@ let _cacheLoaded = false;
 async function loadCurrencyCache() {
   if (_cacheLoaded) return;
   try {
-    const settings = await db.business_settings.toCollection().first();
+    const { data: settings } = await supabase.from("business_settings").select("*").limit(1).maybeSingle();
     if (settings?.currency_code) _currencyCode = settings.currency_code;
     if (settings?.decimal_places !== undefined) _decimalPlaces = settings.decimal_places;
   } catch {
-    // Dexie not available (SSR) — keep defaults
+    // Keep defaults
   }
   _cacheLoaded = true;
 }

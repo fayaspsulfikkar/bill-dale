@@ -1,4 +1,4 @@
-import db from '@/offline/db';
+import { supabase } from '@/lib/supabase';
 
 /**
  * Generate the next invoice number using settings-configured format.
@@ -26,25 +26,19 @@ export async function generateInvoiceNumber(
 
   if (businessId) {
     try {
-      const settings = await db.business_settings
-        .where('business_id')
-        .equals(businessId)
-        .first();
+      const { data: settings } = await supabase.from("business_settings").select("*").eq('business_id', businessId).maybeSingle();
       if (settings) {
         if (settings.invoice_prefix) invoicePrefix = settings.invoice_prefix;
         if (settings.invoice_number_padding) padding = settings.invoice_number_padding;
         if (settings.invoice_start_number) startNumber = settings.invoice_start_number;
       }
     } catch {
-      // Dexie not ready — use defaults
+      // Use defaults
     }
   }
 
   // Find the highest existing invoice number for this branch/year
-  const allInvoices = await db.invoices
-    .where('branch_id')
-    .equals(branchId)
-    .toArray();
+  const { data: allInvoices = [] } = await supabase.from("invoices").select("invoice_number").eq('branch_id', branchId);
 
   const prefix = `${invoicePrefix}${branchCode}-${year}-`;
   let maxSeq = startNumber - 1;

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import db from "@/offline/db";
+import { useEffect, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,17 @@ import { Link2, Copy, CheckCheck, UserPlus } from "lucide-react";
 
 export default function InvitePage() {
   const { user, businessId } = useAuthStore();
-  const invites = useLiveQuery(() =>
-    businessId ? db.staff_invitations.where("business_id").equals(businessId).toArray() : []
-  );
+  const [invites, setInvites] = useState<any[]>([]);
+
+  const fetchInvites = useCallback(async () => {
+    if (!businessId) return;
+    const { data } = await supabase.from("staff_invitations").select("*").eq("business_id", businessId);
+    if (data) setInvites(data);
+  }, [businessId]);
+
+  useEffect(() => {
+    fetchInvites();
+  }, [fetchInvites]);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"staff" | "admin">("staff");
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -27,17 +35,17 @@ export default function InvitePage() {
     const token = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
     const expires = new Date();
     expires.setDate(expires.getDate() + 7);
-    await db.staff_invitations.add({
+    await supabase.from("staff_invitations").insert({
       id: crypto.randomUUID(),
       business_id: businessId,
       token,
       invited_by: user.id,
-      email: email || undefined,
+      email: email || null,
       role,
       permissions: [],
       expires_at: expires.toISOString(),
-      created_at: new Date().toISOString(),
     });
+    fetchInvites();
     setEmail("");
   };
 

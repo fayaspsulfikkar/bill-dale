@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import db, { type Product, type Invoice, type InvoiceItem, type HeldOrder } from "@/offline/db";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { useProducts, useInventory, useBranches, useStaffMembers } from "@/lib/api/queries";
+import type { Product, Invoice, InvoiceItem, HeldOrder } from "@/lib/types";
 import { useAuthStore } from "@/store/authStore";
 import { useCartStore } from "@/store/cartStore";
 import { usePOSStore } from "@/store/posStore";
@@ -81,23 +83,30 @@ export default function POSPage() {
   }, [printMode]);
 
   const { user, businessId, role } = useAuthStore();
-  const dbUser = useLiveQuery(() => user ? db.users.get(user.id) : undefined, [user?.id]);
+  const queryClient = useQueryClient();
+  const dbUser = user;
 
-  // Sync branches + inventory from Supabase → Dexie on mount
-  useDataSync();
   const { items, discount, addItem, updateQuantity, updateItemDiscount, updateItemPrice, removeItem, setDiscount, clearCart, getTotals } = useCartStore();
   const { subtotal, taxAmount, total } = getTotals();
   const { selectedCustomer, selectedBranchId, setSelectedBranchId, setShowHeldOrders, setShowRecentOrders, setShowCashRegister, setShowQuickAdd, setShowShortcutsHelp, orderNotes, resetPOSState } = usePOSStore();
 
-  const business = useLiveQuery(() => businessId ? db.businesses.get(businessId) : undefined, [businessId]);
-  const settings = useLiveQuery(() => businessId ? db.business_settings.where("business_id").equals(businessId).first() : undefined, [businessId]);
-  const allBranches = useLiveQuery(() => db.branches.toArray(), []) ?? [];
-  const allProducts = useLiveQuery(() => db.products.toArray(), []) || [];
-  const allInventory = useLiveQuery(() => db.inventory.toArray(), []) || [];
-  const staffMembers = useLiveQuery(
-    () => businessId ? db.staff_members.where("business_id").equals(businessId).and(s => s.is_active).toArray() : [],
-    [businessId]
-  ) || [];
+  const [business, setBusiness] = useState<any>(null);
+  const [settings, setSettings] = useState<any>(null);
+  useEffect(() => {
+    if (!businessId) return;
+    supabase.from('businesses').select('*').eq('id', businessId).single().then(({ data }) => {
+      if (data) setBusiness(data);
+    });
+    supabase.from('business_settings').select('*').eq('business_id', businessId).single().then(({ data }) => {
+      if (data) setSettings(data);
+    });
+  }, [businessId]);
+
+  const { data: allBranches = [] } = useBranches(businessId || null);
+  const { data: allProducts = [] } = useProducts(businessId || null);
+  const { data: staffMembers = [] } = useStaffMembers(businessId || null);
+  const branchIds = useMemo(() => allBranches.map(b => b.id), [allBranches]);
+  const { data: allInventory = [] } = useInventory(branchIds);
 
   // Background keyboard wedge scanner detector
   useEffect(() => {
@@ -202,7 +211,7 @@ export default function POSPage() {
       total_amount: total,
       created_at: new Date().toISOString(),
     };
-    await db.held_orders.add(heldOrder);
+    await supabase.from('held_orders').insert(heldOrder);
     clearCart();
     resetPOSState();
   };
@@ -258,18 +267,24 @@ export default function POSPage() {
       const timestamp = new Date().toISOString();
       const invoiceNumber = await generateInvoiceNumber(resolvedBranchId, activeBranch?.name ?? "STORE", businessId || undefined);
 
-      const newInvoice: Invoice = {
+      const newInvoice: any = {
         id: invoiceId,
+        business_id: businessId,
         invoice_number: invoiceNumber,
         branch_id: resolvedBranchId,
-        user_id: user?.id ?? "unknown",
+        cashier_id: user?.id ?? "unknown",
+        user_id: user?.id ?? "unknown", // legacy compatibility
         customer_id: selectedCustomer && selectedCustomer.id !== "__walk_in__" ? selectedCustomer.id : undefined,
+        subtotal: subtotal,
         total_amount: total,
         tax_amount: taxAmount,
+        gst_amount: taxAmount, // legacy compatibility
         discount,
         payment_method: paymentMethod,
+        payment_status: "paid",
         notes: orderNotes || undefined,
         staff_name: staffName || user?.name || user?.email || undefined,
+        cashier_name: staffName || user?.name || user?.email || undefined, // legacy compatibility
         status: "completed",
         created_at: timestamp,
       };
@@ -292,25 +307,22 @@ export default function POSPage() {
         };
       });
 
-      await db.transaction('rw', db.invoices, db.invoice_items, db.inventory, db.sync_queue, async () => {
-        // Save Invoice
-        await db.invoices.add(newInvoice);
-        await db.sync_queue.add({ table_name: 'invoices', operation: 'INSERT', data: newInvoice, timestamp });
+      await supabase.from('invoices').insert(newInvoice);
 
-        // Save Items and Deduct Stock
-        for (const item of invoiceItems) {
-          await db.invoice_items.add(item);
-          await db.sync_queue.add({ table_name: 'invoice_items', operation: 'INSERT', data: item, timestamp });
+      // Save Items and Deduct Stock
+      for (const item of invoiceItems) {
+        await supabase.from('invoice_items').insert(item);
 
-          // Deduct Stock — find by product_id only (branch_id may vary per product)
-          const invRecord = await db.inventory.where('product_id').equals(item.product_id).first();
-          if (invRecord) {
-            const updatedStock = Math.max(0, invRecord.stock - item.quantity);
-            await db.inventory.update(invRecord.id, { stock: updatedStock, last_updated: timestamp });
-            await db.sync_queue.add({ table_name: 'inventory', operation: 'UPDATE', data: { ...invRecord, stock: updatedStock }, timestamp });
-          }
+        // Deduct Stock — find by product_id only (branch_id may vary per product)
+        const { data: invRecords } = await supabase.from('inventory').select('*').eq('product_id', item.product_id);
+        if (invRecords && invRecords.length > 0) {
+          const invRecord = invRecords[0];
+          const updatedStock = Math.max(0, invRecord.stock - item.quantity);
+          await supabase.from('inventory').update({ stock: updatedStock, last_updated: timestamp }).eq('id', invRecord.id);
         }
-      });
+      }
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
 
       // Store completed transaction to show print modal
       setCompletedTransaction({

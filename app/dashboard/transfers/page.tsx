@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import db, { type StockTransfer } from "@/offline/db";
+import { useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { useQueryClient } from "@tanstack/react-query";
+import { useBranches, useProducts, useInventory } from "@/lib/api/queries";
 import { useAuthStore } from "@/store/authStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,13 +19,27 @@ import { format } from "date-fns";
 export default function StockTransfersPage() {
   const { businessId, user } = useAuthStore();
   
-  const branches = useLiveQuery(() => db.branches.toArray()) || [];
-  const products = useLiveQuery(() => db.products.toArray()) || [];
-  const inventory = useLiveQuery(() => db.inventory.toArray()) || [];
-  const transfers = useLiveQuery(() => db.stock_transfers.reverse().sortBy("created_at")) || [];
-  const transferItems = useLiveQuery(() => db.stock_transfer_items.toArray()) || [];
-  const businesses = useLiveQuery(() => db.businesses.toArray()) || [];
-  const currentBusiness = businesses.find(b => b.id === businessId);
+  const queryClient = useQueryClient();
+  const { data: branches = [] } = useBranches(businessId || null);
+  const { data: products = [] } = useProducts(businessId || null);
+  const branchIds = useMemo(() => branches.map(b => b.id), [branches]);
+  const { data: inventory = [] } = useInventory(branchIds);
+
+  const [transfers, setTransfers] = useState<any[]>([]);
+  const [transferItems, setTransferItems] = useState<any[]>([]);
+  const [currentBusiness, setCurrentBusiness] = useState<any>(null);
+
+  useEffect(() => {
+    if (!businessId) return;
+    supabase.from('businesses').select('*').eq('id', businessId).single().then(({ data }) => setCurrentBusiness(data));
+    supabase.from('stock_transfers').select('*').eq('business_id', businessId).order('created_at', { ascending: false }).then(({ data }) => setTransfers(data || []));
+  }, [businessId]);
+
+  useEffect(() => {
+    if (transfers.length === 0) return;
+    const transferIds = transfers.map(t => t.id);
+    supabase.from('stock_transfer_items').select('*').in('transfer_id', transferIds).then(({ data }) => setTransferItems(data || []));
+  }, [transfers]);
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [sourceBranch, setSourceBranch] = useState("");
@@ -80,33 +96,32 @@ export default function StockTransfersPage() {
       const transferId = crypto.randomUUID();
       
       // Create transfer
-      await db.stock_transfers.add({
+      await supabase.from('stock_transfers').insert({
         id: transferId,
         business_id: businessId || "local",
         source_branch_id: sourceBranch,
         dest_branch_id: destBranch,
-        status: "pending", // Start as pending
+        status: "pending",
         notes,
-        created_at: new Date().toISOString(),
       });
 
       // Add item
-      await db.stock_transfer_items.add({
-        id: crypto.randomUUID(),
+      await supabase.from('stock_transfer_items').insert({
         transfer_id: transferId,
         product_id: selectedProduct,
         quantity,
       });
 
       // Log activity
-      await db.activity_logs.add({
-        id: crypto.randomUUID(),
+      await supabase.from('activity_logs').insert({
         business_id: businessId || "local",
         user_id: user?.id || "system",
         action: "stock_transfer_created",
         details: { transferId, sourceBranch, destBranch, quantity },
-        created_at: new Date().toISOString(),
       });
+
+      const { data: newTransfers } = await supabase.from('stock_transfers').select('*').eq('business_id', businessId).order('created_at', { ascending: false });
+      setTransfers(newTransfers || []);
 
       setIsAddOpen(false);
       resetForm();
@@ -136,31 +151,34 @@ export default function StockTransfersPage() {
       const items = transferItems.filter(i => i.transfer_id === transferId);
       for (const item of items) {
         // Deduct from source
-        const sourceInv = inventory.find(i => i.branch_id === t.source_branch_id && i.product_id === item.product_id);
-        if (sourceInv) {
-          await db.inventory.update(sourceInv.id, { stock: sourceInv.stock - item.quantity });
+        const { data: sourceInvList } = await supabase.from('inventory').select('*').eq('branch_id', t.source_branch_id).eq('product_id', item.product_id);
+        if (sourceInvList && sourceInvList.length > 0) {
+          const sourceInv = sourceInvList[0];
+          await supabase.from('inventory').update({ stock: sourceInv.stock - item.quantity }).eq('id', sourceInv.id);
         }
         
         // Add to dest
-        const destInv = inventory.find(i => i.branch_id === t.dest_branch_id && i.product_id === item.product_id);
-        if (destInv) {
-          await db.inventory.update(destInv.id, { stock: destInv.stock + item.quantity });
+        const { data: destInvList } = await supabase.from('inventory').select('*').eq('branch_id', t.dest_branch_id).eq('product_id', item.product_id);
+        if (destInvList && destInvList.length > 0) {
+          const destInv = destInvList[0];
+          await supabase.from('inventory').update({ stock: destInv.stock + item.quantity }).eq('id', destInv.id);
         } else {
-          await db.inventory.add({
-            id: crypto.randomUUID(),
+          await supabase.from('inventory').insert({
             branch_id: t.dest_branch_id,
             product_id: item.product_id,
             stock: item.quantity,
-            last_updated: new Date().toISOString()
           });
         }
       }
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
     }
 
-    await db.stock_transfers.update(transferId, {
-      status: newStatus as any,
+    await supabase.from('stock_transfers').update({
+      status: newStatus,
       ...(newStatus === "received" ? { received_at: new Date().toISOString() } : {})
-    });
+    }).eq('id', transferId);
+    
+    setTransfers(prev => prev.map(tr => tr.id === transferId ? { ...tr, status: newStatus } : tr));
   };
 
   return (

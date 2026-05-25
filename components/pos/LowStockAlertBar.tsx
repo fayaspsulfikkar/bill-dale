@@ -1,7 +1,7 @@
 "use client";
 
-import { useLiveQuery } from "dexie-react-hooks";
-import db from "@/offline/db";
+import { useProducts, useInventory } from "@/lib/api/queries";
+import { useMemo } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { AlertTriangle } from "lucide-react";
 
@@ -10,14 +10,17 @@ const LOW_STOCK_THRESHOLD = 5;
 export function LowStockAlertBar() {
   const { businessId } = useAuthStore();
 
-  const lowStockProducts = useLiveQuery(async () => {
-    if (!businessId) return [];
-    const inventory = await db.inventory.where("branch_id").equals(businessId).toArray();
-    const lowItems = inventory.filter(inv => inv.stock > 0 && inv.stock <= LOW_STOCK_THRESHOLD);
-    if (lowItems.length === 0) return [];
-    const products = await Promise.all(lowItems.map(inv => db.products.get(inv.product_id)));
-    return lowItems.map((inv, i) => ({ ...inv, product: products[i] })).filter(i => i.product);
-  }, [businessId]) ?? [];
+  const { data: allInventory = [] } = useInventory(businessId ? [businessId] : []);
+  const { data: allProducts = [] } = useProducts(businessId || null);
+
+  const lowStockProducts = useMemo(() => {
+    if (!businessId || allInventory.length === 0 || allProducts.length === 0) return [];
+    const lowItems = allInventory.filter(inv => inv.stock > 0 && inv.stock <= LOW_STOCK_THRESHOLD);
+    return lowItems.map(inv => {
+      const product = allProducts.find(p => p.id === inv.product_id);
+      return { ...inv, product };
+    }).filter(i => i.product);
+  }, [businessId, allInventory, allProducts]);
 
   if (lowStockProducts.length === 0) return null;
 

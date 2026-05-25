@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import db from "@/offline/db";
+import { supabase } from "@/lib/supabase";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/authStore";
 import { useCartStore } from "@/store/cartStore";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,7 @@ interface Props {
 export function ReturnExchangeModal({ open, onClose }: Props) {
   const { businessId, user } = useAuthStore();
   const { addItem } = useCartStore();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [foundInvoice, setFoundInvoice] = useState<any>(null);
   const [invoiceItems, setInvoiceItems] = useState<ReturnItem[]>([]);
@@ -57,24 +58,25 @@ export function ReturnExchangeModal({ open, onClose }: Props) {
       let invoice = null;
 
       // Try exact invoice number match
-      const byNumber = await db.invoices.where("invoice_number").equals(searchQuery.trim()).first();
+      const { data: byNumber } = await supabase.from('invoices').select('*').eq('invoice_number', searchQuery.trim()).single();
       if (byNumber) { invoice = byNumber; }
 
       // Try invoice ID prefix
       if (!invoice) {
-        const allInvoices = await db.invoices.toArray();
-        invoice = allInvoices.find(inv => inv.id.startsWith(searchQuery.trim()) || inv.id === searchQuery.trim()) ?? null;
+        const { data: allInvoices } = await supabase.from('invoices').select('*');
+        if (allInvoices) {
+          invoice = allInvoices.find(inv => inv.id.startsWith(searchQuery.trim()) || inv.id === searchQuery.trim()) ?? null;
+        }
       }
 
       // Try customer phone
       if (!invoice && businessId) {
-        const customer = await db.customers
-          .where("business_id").equals(businessId)
-          .and(c => c.phone === searchQuery.trim())
-          .first();
+        const { data: customer } = await supabase.from('customers').select('*').eq('business_id', businessId).eq('phone', searchQuery.trim()).single();
         if (customer) {
-          const customerInvoices = await db.invoices.where("customer_id").equals(customer.id).toArray();
-          invoice = customerInvoices.sort((a, b) => b.created_at.localeCompare(a.created_at))[0] ?? null;
+          const { data: customerInvoices } = await supabase.from('invoices').select('*').eq('customer_id', customer.id);
+          if (customerInvoices && customerInvoices.length > 0) {
+            invoice = customerInvoices.sort((a, b) => b.created_at.localeCompare(a.created_at))[0] ?? null;
+          }
         }
       }
 
@@ -84,8 +86,11 @@ export function ReturnExchangeModal({ open, onClose }: Props) {
         return;
       }
 
-      const items = await db.invoice_items.where("invoice_id").equals(invoice.id).toArray();
-      const products = await Promise.all(items.map(i => db.products.get(i.product_id)));
+      const { data: items = [] } = await supabase.from('invoice_items').select('*').eq('invoice_id', invoice.id);
+      const products = await Promise.all((items || []).map(async i => {
+        const { data } = await supabase.from('products').select('*').eq('id', i.product_id).single();
+        return data;
+      }));
 
       const returnItems: ReturnItem[] = items.map((item, idx) => ({
         invoiceItemId: item.id,
@@ -139,19 +144,17 @@ export function ReturnExchangeModal({ open, onClose }: Props) {
         synced: false,
       };
 
-      await db.transaction("rw", db.return_orders, db.inventory, db.sync_queue, async () => {
-        await db.return_orders.add(returnOrderData);
+      await supabase.from('return_orders').insert(returnOrderData);
 
-        // Restock inventory
-        for (const item of invoiceItems.filter(i => i.returnQty > 0)) {
-          const invRecord = await db.inventory.where({ product_id: item.productId, branch_id: activeBranchId }).first();
-          if (invRecord) {
-            await db.inventory.update(invRecord.id, { stock: invRecord.stock + item.returnQty, last_updated: timestamp });
-          }
+      // Restock inventory
+      for (const item of invoiceItems.filter(i => i.returnQty > 0)) {
+        const { data: invRecords } = await supabase.from('inventory').select('*').eq('product_id', item.productId).eq('branch_id', activeBranchId);
+        if (invRecords && invRecords.length > 0) {
+          const invRecord = invRecords[0];
+          await supabase.from('inventory').update({ stock: invRecord.stock + item.returnQty, last_updated: timestamp }).eq('id', invRecord.id);
         }
-
-        await db.sync_queue.add({ table_name: "return_orders", operation: "INSERT", data: returnOrderData, timestamp });
-      });
+      }
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
 
       setStep("done");
     } finally {

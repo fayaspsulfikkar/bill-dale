@@ -1,10 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
-import db from "@/offline/db";
 import type { BusinessSettings } from "@/offline/db";
 
 // Base defaults to prevent React uncontrolled component warnings
@@ -106,10 +102,13 @@ export const BUSINESS_SETTINGS_DEFAULTS: Partial<BusinessSettings> = {
 export function useBusinessSettings() {
   const { businessId } = useAuthStore();
 
-  const settings = useLiveQuery(
-    () => businessId ? db.business_settings.where("business_id").equals(businessId).first() : undefined,
-    [businessId]
-  );
+  const [settings, setSettings] = useState<any>(undefined);
+
+  useEffect(() => {
+    if (businessId) {
+      supabase.from("business_settings").select("*").eq("business_id", businessId).single().then(({ data }) => setSettings(data));
+    }
+  }, [businessId]);
 
   const [form, setForm] = useState<Partial<BusinessSettings>>({ ...BUSINESS_SETTINGS_DEFAULTS });
   const [saving, setSaving] = useState(false);
@@ -145,8 +144,7 @@ export function useBusinessSettings() {
         updated_at: new Date().toISOString(),
       } as any;
       
-      await db.business_settings.put(record);
-      
+
       if (supabase) {
         await supabase.from("business_settings").upsert(record);
       }

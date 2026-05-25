@@ -2,8 +2,11 @@
 
 import { useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useLiveQuery } from "dexie-react-hooks";
-import db from "@/offline/db";
+import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { useBranches, useInvoices, useStaffMembers, useInventory, useProducts } from "@/lib/api/queries";
+import { useAuthStore } from "@/store/authStore";
 import { formatINR } from "@/lib/formatCurrency";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,18 +29,28 @@ export default function BranchProfilePage() {
   const router = useRouter();
   const branchId = params.id as string;
 
-  const branch = useLiveQuery(() => db.branches.get(branchId), [branchId]);
-  const invoices = useLiveQuery(() => db.invoices.where("branch_id").equals(branchId).toArray(), [branchId]) || [];
-  const staff = useLiveQuery(() => db.staff_members.toArray()) || [];
-  const inventory = useLiveQuery(() => db.inventory.where("branch_id").equals(branchId).toArray(), [branchId]) || [];
-  const products = useLiveQuery(() => db.products.toArray()) || [];
+  const { user, businessId } = useAuthStore();
+  const queryClient = useQueryClient();
+  const { data: branches = [] } = useBranches(businessId || null);
+  const branch = branches.find(b => b.id === branchId);
+  const { data: invoices = [] } = useInvoices([branchId]);
+  const { data: staff = [] } = useStaffMembers(businessId || null);
+  const { data: inventory = [] } = useInventory([branchId]);
+  const { data: products = [] } = useProducts(businessId || null);
   
   // Stock transfers where this branch is source OR destination
-  const transfers = useLiveQuery(async () => {
-    return await db.stock_transfers
-      .filter(t => t.source_branch_id === branchId || t.dest_branch_id === branchId)
-      .toArray();
-  }, [branchId]) || [];
+  const [transfers, setTransfers] = useState<any[]>([]);
+  useEffect(() => {
+    if (!branchId) return;
+    const fetchTransfers = async () => {
+      const { data } = await supabase
+        .from('stock_transfers')
+        .select('*')
+        .or(`source_branch_id.eq.${branchId},dest_branch_id.eq.${branchId}`);
+      if (data) setTransfers(data);
+    };
+    fetchTransfers();
+  }, [branchId]);
 
   const [isAssignStaffOpen, setIsAssignStaffOpen] = useState(false);
 
@@ -56,7 +69,8 @@ export default function BranchProfilePage() {
       newIds = [...currentIds, branchId];
     }
     
-    await db.staff_members.update(staffMember.id, { branch_ids: newIds });
+    await supabase.from('staff_members').update({ branch_ids: newIds }).eq('id', staffMember.id);
+    queryClient.invalidateQueries({ queryKey: ["staff"] });
   };
 
   const kpis = useMemo(() => {

@@ -1,13 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Shield, Check, AlertTriangle, Lock, Key, Smartphone, MapPin, EyeOff, Activity, Clock, User, Monitor, Hash } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
-import db from "@/offline/db";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { ALL_ROLES, ROLE_PRESETS, type POSAction } from "@/lib/permissions";
@@ -51,30 +49,31 @@ function ChipSelect<T extends string | number>({ value, options, onChange }: { v
 export default function SecurityTab() {
   const { businessId, user } = useAuthStore();
   
-  // Settings DB State
-  const settings = useLiveQuery(
-    () => businessId ? db.business_settings.where("business_id").equals(businessId).first() : undefined,
-    [businessId]
-  );
-  
-  // Businesses DB State (for Staff PIN)
-  const business = useLiveQuery(
-    () => businessId ? db.businesses.get(businessId) : undefined,
-    [businessId]
-  );
-  
-  // Audit Logs State
-  const auditLogs = useLiveQuery(async () => {
-    if (!businessId) return [];
-    const logs = await db.activity_logs.where("business_id").equals(businessId).toArray();
-    return logs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 50);
-  }, [businessId]) || [];
+  // Supabase State
+  const [settings, setSettings] = useState<any>(undefined);
+  const [business, setBusiness] = useState<any>(undefined);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [userMap, setUserMap] = useState<Record<string, string>>({});
 
-  const users = useLiveQuery(() => db.users.toArray()) || [];
-  const userMap = users.reduce((acc, u) => {
-    acc[u.id] = u.name || u.email || "Unknown User";
-    return acc;
-  }, {} as Record<string, string>);
+  useEffect(() => {
+    if (!businessId) return;
+
+    // Load Settings
+    supabase.from("business_settings").select("*").eq("business_id", businessId).single().then(({ data }) => setSettings(data));
+
+    // Load Business
+    supabase.from("businesses").select("*").eq("id", businessId).single().then(({ data }) => setBusiness(data));
+
+    // Load Audit Logs
+    supabase.from("activity_logs").select("*").eq("business_id", businessId).order("created_at", { ascending: false }).limit(50).then(({ data }) => setAuditLogs(data || []));
+    
+    // Load users (we might need a different way, but for now just mock or use staff members)
+    supabase.from("staff_members").select("*").eq("business_id", businessId).then(({ data }) => {
+      const um: Record<string, string> = {};
+      (data || []).forEach((u: any) => { um[u.id] = u.name; });
+      setUserMap(um);
+    });
+  }, [businessId]);
   
   // Pin Auth State
   const hasPin = !!business?.admin_pin;
@@ -181,7 +180,6 @@ export default function SecurityTab() {
     if (!businessId) return;
     setSaving(true);
     try {
-      await db.businesses.update(businessId, { admin_pin: value } as never);
       if (supabase) {
         await supabase.from("businesses").update({ admin_pin: value }).eq("id", businessId);
       }
@@ -205,7 +203,6 @@ export default function SecurityTab() {
         ...data,
         updated_at: new Date().toISOString(),
       } as any;
-      await db.business_settings.put(record);
       if (supabase) {
         await supabase.from("business_settings").upsert(record);
       }

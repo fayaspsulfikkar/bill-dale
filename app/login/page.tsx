@@ -2,14 +2,18 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { signInWithGoogle } from "@/lib/auth";
+import { signInWithGoogle, signInWithEmail } from "@/lib/auth";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const { login } = useAuthStore();
   const router = useRouter();
   const isMockMode = !supabase;
@@ -30,6 +34,33 @@ export default function LoginPage() {
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Google sign-in failed.");
       setLoading(false);
+    }
+  };
+
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      setError("Please enter both email and password.");
+      return;
+    }
+    if (isMockMode) {
+      setEmailLoading(true);
+      setTimeout(() => {
+        login({ id: "mock-id-123", email, name: "Admin User" });
+        router.push("/dashboard");
+      }, 600);
+      return;
+    }
+    setError(null);
+    setEmailLoading(true);
+    try {
+      await signInWithEmail(email, password);
+      // No need to manually push if AuthProvider listens to auth state changes, 
+      // but pushing is safe here if needed or AuthProvider will redirect.
+      router.push("/dashboard");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Invalid email or password.");
+      setEmailLoading(false);
     }
   };
 
@@ -95,23 +126,59 @@ export default function LoginPage() {
 
           {isMockMode && (
             <div className="p-3 mb-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-xs font-medium">
-              ⚡ Demo mode — connect Supabase to enable real Google login.
+              ⚡ Demo mode — connect Supabase to enable real login.
             </div>
           )}
 
+          <form onSubmit={handleEmailSubmit} className="space-y-4 mb-4">
+            <div>
+              <input
+                type="email"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+                required
+              />
+            </div>
+            <div>
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+                required
+              />
+            </div>
+            <motion.button
+              type="submit"
+              disabled={emailLoading || loading}
+              whileHover={{ scale: (emailLoading || loading) ? 1 : 1.02 }}
+              whileTap={{ scale: (emailLoading || loading) ? 1 : 0.98 }}
+              className="w-full flex items-center justify-center gap-2 py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl shadow-md hover:shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed text-sm"
+            >
+              {emailLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign In with Email"}
+            </motion.button>
+          </form>
+
+          <div className="relative flex items-center py-2 mb-4">
+            <div className="flex-grow border-t border-border"></div>
+            <span className="flex-shrink-0 mx-4 text-muted-foreground text-xs uppercase tracking-widest">Or</span>
+            <div className="flex-grow border-t border-border"></div>
+          </div>
+
           <motion.button
             id="google-signin-btn"
+            type="button"
             onClick={handleGoogle}
-            disabled={loading}
-            whileHover={{ scale: loading ? 1 : 1.02 }}
-            whileTap={{ scale: loading ? 1 : 0.98 }}
+            disabled={loading || emailLoading}
+            whileHover={{ scale: (loading || emailLoading) ? 1 : 1.02 }}
+            whileTap={{ scale: (loading || emailLoading) ? 1 : 0.98 }}
             className="w-full flex items-center justify-center gap-3 py-3.5 bg-white text-gray-800 font-semibold rounded-xl border border-gray-200 shadow-md hover:shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading ? (
-              <svg className="w-5 h-5 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
+              <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
             ) : (
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

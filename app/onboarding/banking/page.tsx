@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Building2, CheckCircle2, Shield, Eye, EyeOff } from "lucide-react";
-import db, { type Business } from "@/offline/db";
+
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
 import { logActivity } from "@/lib/activityLogger";
@@ -45,7 +45,7 @@ export default function OnboardingBanking() {
 
   // ── Phase 2: Save everything (Business + Bank + PIN) ──────
   const handleSetPin = async () => {
-    if (pinForm.pin.length < 4) { setPinError("PIN must be at least 4 digits."); return; }
+    if (pinForm.pin.length !== 4) { setPinError("PIN must be exactly 4 digits."); return; }
     if (pinForm.pin !== pinForm.confirm) { setPinError("PINs do not match."); return; }
 
     setPinError("");
@@ -55,7 +55,7 @@ export default function OnboardingBanking() {
       const step2 = JSON.parse(sessionStorage.getItem("onboarding_step2") || "{}");
 
       const businessId = crypto.randomUUID();
-      const newBusiness: Business = {
+      const newBusiness = {
         id: businessId,
         name: step1.shopName || "My Business",
         owner_name: step1.ownerName,
@@ -76,27 +76,16 @@ export default function OnboardingBanking() {
         created_at: new Date().toISOString(),
       };
 
-      // Save to local Dexie
-      await db.transaction("rw", db.businesses, db.business_members, db.sync_queue, async () => {
-        await db.businesses.add(newBusiness);
-        await db.business_members.add({
-          id: crypto.randomUUID(),
-          business_id: businessId,
-          user_id: user?.id ?? "mock",
-          role: "admin",
-          permissions: [],
-          joined_at: new Date().toISOString(),
-        });
-        await db.sync_queue.add({ table_name: "businesses", operation: "INSERT", data: newBusiness, timestamp: new Date().toISOString() });
-      });
-
-      // Sync to Supabase
       if (supabase && user) {
-        await supabase.from("businesses").upsert(newBusiness, { onConflict: "id" });
-        await supabase.from("business_members").upsert(
-          { business_id: businessId, user_id: user.id, role: "admin", permissions: [] },
-          { onConflict: "business_id,user_id" }
-        );
+        await supabase.from("businesses").insert(newBusiness);
+        await supabase.from("business_members").insert({ 
+          business_id: businessId, 
+          user_id: user.id, 
+          role: "admin", 
+          permissions: [] 
+        });
+      } else {
+        throw new Error("You must be logged in to create a business.");
       }
 
       setOnboardingComplete(businessId, newBusiness.name);
@@ -226,13 +215,13 @@ export default function OnboardingBanking() {
 
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label>PIN (4–8 digits)</Label>
+                <Label>PIN (4 digits)</Label>
                 <div className="relative">
                   <input
                     ref={pinRef}
                     type={showPin ? "text" : "password"}
                     inputMode="numeric"
-                    maxLength={8}
+                    maxLength={4}
                     value={pinForm.pin}
                     onChange={(e) => { setPinForm({ ...pinForm, pin: e.target.value.replace(/\D/g, "") }); setPinError(""); }}
                     placeholder="Enter PIN"
@@ -250,7 +239,7 @@ export default function OnboardingBanking() {
                   <input
                     type={showConfirm ? "text" : "password"}
                     inputMode="numeric"
-                    maxLength={8}
+                    maxLength={4}
                     value={pinForm.confirm}
                     onChange={(e) => { setPinForm({ ...pinForm, confirm: e.target.value.replace(/\D/g, "") }); setPinError(""); }}
                     onKeyDown={(e) => e.key === "Enter" && handleSetPin()}
@@ -265,7 +254,7 @@ export default function OnboardingBanking() {
 
               <motion.button
                 onClick={handleSetPin}
-                disabled={savingPin || pinForm.pin.length < 4}
+                disabled={savingPin || pinForm.pin.length !== 4}
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.98 }}
                 className="w-full h-12 bg-primary text-primary-foreground font-bold rounded-xl disabled:opacity-50 transition-all text-base"

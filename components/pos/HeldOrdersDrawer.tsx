@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import db, { type HeldOrder } from "@/offline/db";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import type { HeldOrder } from "@/lib/types";
 import { useAuthStore } from "@/store/authStore";
 import { usePOSStore } from "@/store/posStore";
 import { useCartStore } from "@/store/cartStore";
@@ -20,10 +20,17 @@ export function HeldOrdersDrawer() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmResumeOrder, setConfirmResumeOrder] = useState<HeldOrder | null>(null);
 
-  const heldOrders = useLiveQuery(
-    () => businessId ? db.held_orders.where("business_id").equals(businessId).toArray() : [],
-    [businessId]
-  ) ?? [];
+  const [heldOrders, setHeldOrders] = useState<HeldOrder[]>([]);
+  useEffect(() => {
+    if (!businessId) return;
+    const fetchOrders = async () => {
+      const { data } = await supabase.from('held_orders').select('*').eq('business_id', businessId);
+      if (data) setHeldOrders(data);
+    };
+    if (showHeldOrders) {
+      fetchOrders();
+    }
+  }, [businessId, showHeldOrders]);
 
   const handleResume = async (order: HeldOrder) => {
     if (cartItems.length > 0) {
@@ -43,18 +50,19 @@ export function HeldOrdersDrawer() {
 
     // Restore customer if any
     if (order.customer_id && order.customer_id !== "__walk_in__") {
-      const customer = await db.customers.get(order.customer_id);
+      const { data: customer } = await supabase.from('customers').select('*').eq('id', order.customer_id).single();
       if (customer) setSelectedCustomer(customer);
     }
 
     // Remove held order
-    await db.held_orders.delete(order.id);
+    await supabase.from('held_orders').delete().eq('id', order.id);
     setConfirmResumeOrder(null);
     setShowHeldOrders(false);
   };
 
   const handleDelete = async (id: string) => {
-    await db.held_orders.delete(id);
+    await supabase.from('held_orders').delete().eq('id', id);
+    setHeldOrders(prev => prev.filter(o => o.id !== id));
     setConfirmDeleteId(null);
   };
 

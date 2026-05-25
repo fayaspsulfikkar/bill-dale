@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import db from "@/offline/db";
+import { useEffect, useState } from "react";
+import { useBranches } from "@/lib/api/queries";
+import { supabase } from "@/lib/supabase";
 import { usePOSStore } from "@/store/posStore";
 import { useAuthStore } from "@/store/authStore";
 import { Button } from "@/components/ui/button";
@@ -13,19 +13,24 @@ import { Lock, Store, ShieldAlert, Loader2 } from "lucide-react";
 export function BranchLoginModal() {
   const { selectedBranchId, setSelectedBranchId } = usePOSStore();
   const { businessId } = useAuthStore();
-  const branches = useLiveQuery(() => db.branches.toArray(), []);
-  const business = useLiveQuery(() => businessId ? db.businesses.get(businessId) : undefined, [businessId]);
+  const { data: branches, isLoading: branchesLoading } = useBranches(businessId || null);
+  const [business, setBusiness] = useState<any>(undefined);
+
+  useEffect(() => {
+    if (businessId) {
+      supabase.from("businesses").select("*").eq("id", businessId).single().then(({ data }) => setBusiness(data));
+    }
+  }, [businessId]);
 
   const [selectedBranch, setSelectedBranch] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // While branches are loading from IndexedDB, show nothing to avoid flicker
-  if (branches === undefined) return null;
+  // While branches are loading from Supabase, show nothing to avoid flicker
+  if (branchesLoading) return null;
 
-  // If a branch is already selected, or if the business has no branches yet, hide the modal.
-  if (selectedBranchId !== null || branches.length === 0) return null;
+  if (selectedBranchId !== null || !branches || branches.length === 0) return null;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

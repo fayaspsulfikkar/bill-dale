@@ -6,8 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Shield, X, Clock } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
-import db from "@/offline/db";
-import { useLiveQuery } from "dexie-react-hooks";
+
 
 interface AdminPinDialogProps {
   open: boolean;
@@ -32,10 +31,14 @@ export function AdminPinDialog({
   const [mounted, setMounted] = useState(false);
 
   // Read default timer from settings
-  const settings = useLiveQuery(
-    () => businessId ? db.business_settings.where("business_id").equals(businessId).first() : undefined,
-    [businessId]
-  );
+  const [settings, setSettings] = useState<any>(null);
+  const pinLength = settings?.security_pin_length ?? 4;
+
+  useEffect(() => {
+    if (businessId) {
+      supabase.from("business_settings").select("*").eq("business_id", businessId).single().then(({ data }) => setSettings(data));
+    }
+  }, [businessId]);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -61,8 +64,8 @@ export function AdminPinDialog({
 
   const handleVerify = async (currentPin?: string) => {
     const pinToVerify = currentPin ?? pin;
-    if (!pinToVerify || pinToVerify.length < 4) {
-      setError("Enter all 4 digits.");
+    if (!pinToVerify || pinToVerify.length < pinLength) {
+      setError(`Enter all ${pinLength} digits.`);
       triggerShake();
       return;
     }
@@ -85,10 +88,7 @@ export function AdminPinDialog({
         if (!dbErr && data?.admin_pin) actualPin = data.admin_pin;
       }
 
-      if (!actualPin) {
-        const localBiz = await db.businesses.get(businessId);
-        if (localBiz?.admin_pin) actualPin = localBiz.admin_pin;
-      }
+
 
       if (!actualPin) {
         setError("No PIN set. Go to Settings to create one first.");
@@ -113,10 +113,10 @@ export function AdminPinDialog({
   };
 
   const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/\D/g, "").slice(0, 4);
+    const val = e.target.value.replace(/\D/g, "").slice(0, pinLength);
     setPin(val);
     setError("");
-    if (val.length === 4) {
+    if (val.length === pinLength) {
       handleVerify(val);
     }
   };
@@ -190,7 +190,7 @@ export function AdminPinDialog({
                     <Shield className="w-8 h-8 text-indigo-400" />
                   </div>
                   <h2 className="text-xl font-bold text-white tracking-tight">{title}</h2>
-                  <p className="text-sm text-slate-400 mt-1">Enter your 4-digit admin PIN</p>
+                  <p className="text-sm text-slate-400 mt-1">Enter your {pinLength}-digit admin PIN</p>
                 </div>
 
                 {/* Error Message */}
@@ -216,7 +216,7 @@ export function AdminPinDialog({
                     ref={inputRef}
                     type="password"
                     inputMode="numeric"
-                    maxLength={4}
+                    maxLength={pinLength}
                     value={pin}
                     onChange={handlePinChange}
                     onKeyDown={(e) => e.key === "Enter" && handleVerify()}
@@ -230,7 +230,7 @@ export function AdminPinDialog({
                     className="flex justify-center gap-3"
                     onClick={() => inputRef.current?.focus()}
                   >
-                    {[0, 1, 2, 3].map((i) => {
+                    {Array.from({ length: pinLength }).map((_, i) => {
                       const filled = i < pin.length;
                       const active = i === pin.length;
                       return (
@@ -292,17 +292,17 @@ export function AdminPinDialog({
                 <div className="flex flex-col gap-3">
                   <button
                     onClick={() => handleVerify()}
-                    disabled={checking || pin.length < 4}
+                    disabled={checking || pin.length < pinLength}
                     className={`w-full py-3.5 rounded-xl font-bold text-base transition-all duration-200 relative overflow-hidden ${
-                      pin.length >= 4
+                      pin.length >= pinLength
                         ? "text-white shadow-[0_8px_20px_rgba(99,102,241,0.4)] border border-indigo-400/50"
                         : "bg-white/5 text-white/40 cursor-not-allowed border border-white/10"
                     }`}
-                    style={pin.length >= 4 ? {
+                    style={pin.length >= pinLength ? {
                       background: "linear-gradient(135deg, rgba(99,102,241,0.8) 0%, rgba(139,92,246,0.8) 100%)",
                     } : {}}
                   >
-                    {pin.length >= 4 && (
+                    {pin.length >= pinLength && (
                       <div className="absolute inset-0 bg-gradient-to-t from-transparent to-white/20 pointer-events-none" />
                     )}
                     {checking ? "Verifying..." : "Unlock Access"}

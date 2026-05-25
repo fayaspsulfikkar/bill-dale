@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import db, { type StaffMember, type ActivityLog } from "@/offline/db";
+import { useEffect, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+import { useBranches, useInvoices } from "@/lib/api/queries";
 import { useAuthStore } from "@/store/authStore";
 import { formatINR } from "@/lib/formatCurrency";
 import { Button } from "@/components/ui/button";
@@ -29,12 +30,21 @@ export default function UsersPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   // Live data
-  const allStaff = useLiveQuery(
-    () => businessId ? db.staff_members.where("business_id").equals(businessId).toArray() : [],
-    [businessId]
-  ) || [];
-  const branches = useLiveQuery(() => db.branches.toArray()) || [];
-  const invoices = useLiveQuery(() => db.invoices.toArray()) || [];
+  const [allStaff, setAllStaff] = useState<any[]>([]);
+
+  const fetchStaff = useCallback(async () => {
+    if (!businessId) return;
+    const { data } = await supabase.from('staff_members').select('*').eq('business_id', businessId);
+    if (data) setAllStaff(data);
+  }, [businessId]);
+
+  useEffect(() => {
+    fetchStaff();
+  }, [fetchStaff]);
+
+  const { data: branches = [] } = useBranches(businessId || null);
+  const branchIds = useMemo(() => branches.map(b => b.id), [branches]);
+  const { data: invoices = [] } = useInvoices(branchIds);
 
   // Staff stats from invoices
   const staffStats = useMemo(() => {
@@ -86,19 +96,17 @@ export default function UsersPage() {
   // Activity log helper
   const logActivity = async (action: string, details: Record<string, unknown>) => {
     if (!businessId) return;
-    const log: ActivityLog = {
-      id: crypto.randomUUID(),
+    const log = {
       business_id: businessId,
       user_id: currentUser?.id || "system",
       action,
       details,
-      created_at: new Date().toISOString(),
     };
-    await db.activity_logs.add(log);
+    await supabase.from("activity_logs").insert(log);
   };
 
   const openAdd = () => { setEditingId(null); setForm(EMPTY_FORM); setDialogOpen(true); };
-  const openEdit = (m: StaffMember) => {
+  const openEdit = (m: any) => {
     setEditingId(m.id);
     setForm({ name: m.name, phone: m.phone ?? "", role_title: m.role_title, branch_ids: m.branch_ids || [] });
     setDialogOpen(true);
@@ -111,12 +119,12 @@ export default function UsersPage() {
     try {
       if (editingId) {
         const oldMember = allStaff.find(s => s.id === editingId);
-        await db.staff_members.update(editingId, {
+        await supabase.from("staff_members").update({
           name: form.name,
-          phone: form.phone || undefined,
+          phone: form.phone || null,
           role_title: form.role_title,
-          branch_ids: form.branch_ids.length > 0 ? form.branch_ids : undefined,
-        });
+          branch_ids: form.branch_ids.length > 0 ? form.branch_ids : null,
+        }).eq("id", editingId);
         // Log branch transfer if changed
         const oldBranches = (oldMember?.branch_ids || []).sort().join(",");
         const newBranches = form.branch_ids.sort().join(",");
@@ -127,34 +135,35 @@ export default function UsersPage() {
           await logActivity("staff_edited", { staff_name: form.name });
         }
       } else {
-        const newMember: StaffMember = {
-          id: crypto.randomUUID(),
+        const newMember = {
           business_id: businessId,
           name: form.name,
-          phone: form.phone || undefined,
+          phone: form.phone || null,
           role_title: form.role_title || "Sales Staff",
           is_active: true,
-          branch_ids: form.branch_ids.length > 0 ? form.branch_ids : undefined,
-          created_at: new Date().toISOString(),
+          branch_ids: form.branch_ids.length > 0 ? form.branch_ids : null,
         };
-        await db.staff_members.add(newMember);
+        await supabase.from("staff_members").insert(newMember);
         await logActivity("staff_added", { staff_name: form.name, role: form.role_title });
       }
+      await fetchStaff();
       setDialogOpen(false);
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async (m: StaffMember) => {
+  const handleDelete = async (m: any) => {
     if (!confirm(`Remove ${m.name}?`)) return;
-    await db.staff_members.delete(m.id);
+    await supabase.from("staff_members").delete().eq("id", m.id);
     await logActivity("staff_deleted", { staff_name: m.name });
+    await fetchStaff();
   };
 
-  const toggleActive = async (m: StaffMember) => {
-    await db.staff_members.update(m.id, { is_active: !m.is_active });
+  const toggleActive = async (m: any) => {
+    await supabase.from("staff_members").update({ is_active: !m.is_active }).eq("id", m.id);
     await logActivity(m.is_active ? "staff_deactivated" : "staff_activated", { staff_name: m.name });
+    await fetchStaff();
   };
 
   const toggleBranch = (branchId: string) => {

@@ -6,7 +6,7 @@ import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
 import { getBusinessMembership } from "@/lib/auth";
 import { isAdminLevel, ROLE_PRESETS, type UserRole } from "@/lib/permissions";
-import db from "@/offline/db";
+
 import type { User } from "@supabase/supabase-js";
 
 const PUBLIC_PATHS = ["/login", "/invite", "/auth"];
@@ -150,23 +150,7 @@ async function hydrateUser(
     ? !!membership.business_id
     : persisted.hasCompletedOnboarding;
 
-  // If still no businessId after Supabase + Zustand, try Dexie as last resort
-  if (!businessId) {
-    try {
-      const localMember = await db.business_members
-        .where("user_id").equals(supabaseUser.id)
-        .first();
-      if (localMember?.business_id) {
-        businessId = localMember.business_id;
-        hasOnboarded = true;
-        // Try to get the business name from Dexie too
-        const localBiz = await db.businesses.get(localMember.business_id);
-        if (localBiz?.name) businessName = localBiz.name;
-      }
-    } catch {
-      // Dexie not available (SSR or private mode) — ignore
-    }
-  }
+
 
   const role = (membership?.role ?? (hasOnboarded ? "owner" : null)) as UserRole | null;
   
@@ -176,7 +160,7 @@ async function hydrateUser(
 
   if (businessId) {
     try {
-      const bSettings = await db.business_settings.where("business_id").equals(businessId).first();
+      const { data: bSettings } = await supabase.from("business_settings").select("*").eq("business_id", businessId).maybeSingle();
       if (bSettings) {
         pinRequiredActions = bSettings.security_pin_required_actions || [];
         if (role && bSettings.security_role_permissions?.[role]) {
@@ -184,7 +168,7 @@ async function hydrateUser(
         }
       }
     } catch {
-      // ignore offline/dexie error
+      // ignore
     }
   }
 

@@ -1,4 +1,4 @@
-import { Invoice, BusinessSettings } from "@/offline/db";
+import { Invoice, BusinessSettings } from "@/lib/types";
 import { format } from "date-fns";
 import type { DividerStyle } from "@/components/settings/receipts/receipt-types";
 

@@ -14,7 +14,6 @@ import GeneralTab from "@/components/settings/GeneralTab";
 import SecurityTab from "@/components/settings/SecurityTab";
 import ReceiptsTab from "@/components/settings/receipts/ReceiptsTab";
 import DevicesTab from "@/components/settings/DevicesTab";
-import SyncTab from "@/components/settings/SyncTab";
 import UsersTab from "@/components/settings/UsersTab";
 import PaymentsTab from "@/components/settings/PaymentsTab";
 import InventoryTab from "@/components/settings/InventoryTab";
@@ -26,7 +25,7 @@ import AdvancedTab from "@/components/settings/AdvancedTab";
 
 type SettingsTab =
   | "general" | "security" | "users" | "payments" | "receipts"
-  | "inventory" | "customers" | "devices" | "sync"
+  | "inventory" | "customers" | "devices"
   | "notifications" | "integrations" | "ai"
   | "appearance" | "advanced";
 
@@ -47,7 +46,6 @@ const TAB_GROUPS = [
       { id: "inventory", label: "Inventory Rules", icon: PackageOpen, keywords: "barcode sku expiry batch tracking reorder automation" },
       { id: "customers", label: "Customers & Loyalty", icon: Users2, keywords: "loyalty credit membership referral birthday" },
       { id: "devices", label: "Hardware & Devices", icon: Monitor, keywords: "printers scanner cash drawer bluetooth network" },
-      { id: "sync", label: "Data & Sync", icon: Database, keywords: "offline cloud backup storage queue health online" },
     ]
   },
   {
@@ -184,7 +182,6 @@ export default function SettingsPage() {
               {activeTab === "security" && <SecurityTab />}
               {activeTab === "receipts" && <ReceiptsTab />}
               {activeTab === "devices" && <DevicesTab />}
-              {activeTab === "sync" && <SyncTab />}
               {activeTab === "users" && <UsersTab />}
               {activeTab === "payments" && <PaymentsTab />}
               {activeTab === "inventory" && <InventoryTab />}

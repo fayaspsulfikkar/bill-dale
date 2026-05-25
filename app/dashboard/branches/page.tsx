@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import db, { type Branch } from "@/offline/db";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { useBranches, useInvoices, useInventory, useProducts, useStaffMembers } from "@/lib/api/queries";
+import type { Branch } from "@/lib/types";
+import { useAuthStore } from "@/store/authStore";
 import { formatINR } from "@/lib/formatCurrency";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,11 +33,14 @@ export default function BranchesPage() {
   const router = useRouter();
   
   // Data
-  const branches = useLiveQuery(() => db.branches.toArray()) || [];
-  const invoices = useLiveQuery(() => db.invoices.toArray()) || [];
-  const staff = useLiveQuery(() => db.staff_members.toArray()) || [];
-  const inventory = useLiveQuery(() => db.inventory.toArray()) || [];
-  const products = useLiveQuery(() => db.products.toArray()) || [];
+  const { user, businessId } = useAuthStore();
+  const queryClient = useQueryClient();
+  const { data: branches = [] } = useBranches(businessId || null);
+  const branchIds = useMemo(() => branches.map((b: Branch) => b.id), [branches]);
+  const { data: invoices = [] } = useInvoices(branchIds);
+  const { data: staff = [] } = useStaffMembers(businessId || null);
+  const { data: inventory = [] } = useInventory(branchIds);
+  const { data: products = [] } = useProducts(businessId || null);
 
   // State
   const [search, setSearch] = useState("");
@@ -141,10 +147,12 @@ export default function BranchesPage() {
 
     if (editingBranch) {
       const updated = { ...editingBranch, ...formData } as Branch;
-      await db.branches.put(updated);
+      await supabase.from('branches').update(updated).eq('id', updated.id);
     } else {
+      if (!businessId) return;
       const newBranch: Branch = {
         id: crypto.randomUUID(),
+        business_id: businessId,
         name: formData.name,
         address: formData.address,
         branch_code: formData.branch_code,
@@ -153,8 +161,9 @@ export default function BranchesPage() {
         email: formData.email,
         status: formData.status || "active",
       };
-      await db.branches.add(newBranch);
+      await supabase.from('branches').insert(newBranch);
     }
+    queryClient.invalidateQueries({ queryKey: ["branches"] });
     setIsAddOpen(false);
     setIsEditOpen(false);
     setFormData({});
@@ -171,13 +180,15 @@ export default function BranchesPage() {
         setIsEditOpen(true);
         break;
       case "toggle":
-        await db.branches.update(branch.id, { 
+        await supabase.from('branches').update({ 
           status: branch.status === "active" ? "inactive" : "active" 
-        });
+        }).eq('id', branch.id);
+        queryClient.invalidateQueries({ queryKey: ["branches"] });
         break;
       case "archive":
         if (confirm(`Are you sure you want to archive ${branch.name}? It will be hidden from normal views but history is kept.`)) {
-          await db.branches.update(branch.id, { status: "archived" });
+          await supabase.from('branches').update({ status: "archived" }).eq('id', branch.id);
+          queryClient.invalidateQueries({ queryKey: ["branches"] });
         }
         break;
     }

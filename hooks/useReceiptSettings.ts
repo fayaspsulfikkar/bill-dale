@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
-import db from "@/offline/db";
 import type { BusinessSettings, ReceiptTemplate } from "@/offline/db";
 import type { ReceiptSettingsSnapshot } from "@/components/settings/receipts/receipt-types";
 import { RECEIPT_DEFAULTS } from "@/components/settings/receipts/receipt-constants";
@@ -16,16 +14,16 @@ type ReceiptFormState = ReceiptSettingsSnapshot;
 export function useReceiptSettings() {
   const { businessId, user } = useAuthStore();
 
-  // ─── Live DB queries ───
-  const settings = useLiveQuery(
-    () => businessId ? db.business_settings.where("business_id").equals(businessId).first() : undefined,
-    [businessId]
-  );
+  // ─── Supabase queries ───
+  const [settings, setSettings] = useState<any>(undefined);
+  const [templates, setTemplates] = useState<any[]>([]);
 
-  const templates = useLiveQuery(
-    () => businessId ? db.receipt_templates.where("business_id").equals(businessId).toArray() : [],
-    [businessId]
-  ) || [];
+  useEffect(() => {
+    if (businessId) {
+      supabase.from("business_settings").select("*").eq("business_id", businessId).single().then(({ data }) => setSettings(data));
+      supabase.from("receipt_templates").select("*").eq("business_id", businessId).then(({ data }) => setTemplates(data || []));
+    }
+  }, [businessId]);
 
   // ─── Form State ───
   const [form, setForm] = useState<ReceiptFormState>({ ...RECEIPT_DEFAULTS });
@@ -64,7 +62,7 @@ export function useReceiptSettings() {
         ...data,
         updated_at: new Date().toISOString(),
       } as any;
-      await db.business_settings.put(record);
+
       if (supabase) {
         await supabase.from("business_settings").upsert(record);
       }
@@ -113,7 +111,7 @@ export function useReceiptSettings() {
       created_at: now,
       updated_at: now,
     };
-    await db.receipt_templates.put(template);
+
     if (supabase) {
       await supabase.from("receipt_templates").upsert(template);
     }
@@ -121,7 +119,7 @@ export function useReceiptSettings() {
   }, [businessId, form, templates.length]);
 
   const duplicateTemplate = useCallback(async (templateId: string) => {
-    const original = await db.receipt_templates.get(templateId);
+    const { data: original } = await supabase.from("receipt_templates").select("*").eq("id", templateId).single();
     if (!original || !businessId) return;
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
@@ -133,14 +131,13 @@ export function useReceiptSettings() {
       created_at: now,
       updated_at: now,
     };
-    await db.receipt_templates.put(duplicate);
     if (supabase) {
       await supabase.from("receipt_templates").upsert(duplicate);
     }
   }, [businessId]);
 
   const deleteTemplate = useCallback(async (templateId: string) => {
-    await db.receipt_templates.delete(templateId);
+
     if (supabase) {
       await supabase.from("receipt_templates").delete().eq("id", templateId);
     }
@@ -149,14 +146,16 @@ export function useReceiptSettings() {
   const setDefaultTemplate = useCallback(async (templateId: string) => {
     if (!businessId) return;
     // Unmark all current defaults
-    const all = await db.receipt_templates.where("business_id").equals(businessId).toArray();
-    for (const t of all) {
-      if (t.is_default) {
-        await db.receipt_templates.update(t.id, { is_default: false } as any);
+    const { data: all } = await supabase.from("receipt_templates").select("*").eq("business_id", businessId);
+    if (all) {
+      for (const t of all) {
+        if (t.is_default) {
+          await supabase.from("receipt_templates").update({ is_default: false }).eq("id", t.id);
+        }
       }
     }
     // Mark new default
-    await db.receipt_templates.update(templateId, { is_default: true } as any);
+    await supabase.from("receipt_templates").update({ is_default: true }).eq("id", templateId);
   }, [businessId]);
 
   const loadTemplate = useCallback((template: ReceiptTemplate) => {

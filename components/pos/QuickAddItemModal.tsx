@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ManagerApprovalModal } from "./ManagerApprovalModal";
 import { Zap } from "lucide-react";
-import type { Product } from "@/offline/db";
+import type { Product } from "@/lib/types";
 
 export function QuickAddItemModal() {
   const { role } = useAuthStore();
@@ -46,8 +46,9 @@ export function QuickAddItemModal() {
   };
 
   const doAdd = () => {
-    const customProduct: Product = {
+    const customProduct: any = {
       id: `CUSTOM-${crypto.randomUUID()}`,
+      business_id: role === "admin" ? null : null, // It's a custom cart item, doesn't actually exist in db
       name: form.name.trim(),
       category: "Custom",
       brand: "—",

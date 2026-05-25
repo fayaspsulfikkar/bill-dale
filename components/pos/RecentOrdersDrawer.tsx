@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import db from "@/offline/db";
+import { useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { useCustomers, useInvoices } from "@/lib/api/queries";
 import { useAuthStore } from "@/store/authStore";
 import { usePOSStore } from "@/store/posStore";
 import { Button } from "@/components/ui/button";
@@ -58,8 +59,19 @@ function groupByDate(invoices: any[]) {
 
 export function RecentOrdersDrawer({ onStartReturn }: Props) {
   const { businessId } = useAuthStore();
-  const business = useLiveQuery(() => businessId ? db.businesses.get(businessId) : undefined, [businessId]);
-  const settings = useLiveQuery(() => businessId ? db.business_settings.where("business_id").equals(businessId).first() : undefined, [businessId]);
+  const [business, setBusiness] = useState<any>(null);
+  const [settings, setSettings] = useState<any>(null);
+
+  useEffect(() => {
+    if (!businessId) return;
+    supabase.from('businesses').select('*').eq('id', businessId).single().then(({ data }) => {
+      if (data) setBusiness(data);
+    });
+    supabase.from('business_settings').select('*').eq('business_id', businessId).single().then(({ data }) => {
+      if (data) setSettings(data);
+    });
+  }, [businessId]);
+  
   const { showRecentOrders, setShowRecentOrders } = usePOSStore();
   const [search, setSearch] = useState("");
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
@@ -68,11 +80,10 @@ export function RecentOrdersDrawer({ onStartReturn }: Props) {
   const [printMode, setPrintMode] = useState<"thermal" | "a4" | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
-  // Fetch all invoices and sort in memory since created_at is not a Dexie index
-  const allInvoicesRaw = useLiveQuery(() => db.invoices.toArray(), []) ?? [];
+  const { data: allInvoicesRaw = [] } = useInvoices(businessId || null);
   const allInvoices = [...allInvoicesRaw].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 100);
 
-  const allCustomersRaw = useLiveQuery(() => db.customers.toArray(), []) ?? [];
+  const { data: allCustomersRaw = [] } = useCustomers(businessId || null);
   const customerMap = new Map(allCustomersRaw.map(c => [c.id, c]));
 
   const filtered = search.trim()
@@ -94,13 +105,16 @@ export function RecentOrdersDrawer({ onStartReturn }: Props) {
   const todayRevenue = todayInvoices.reduce((s, i) => s + i.total_amount, 0);
 
   const openDetail = async (invoice: any) => {
-    const items = await db.invoice_items.where("invoice_id").equals(invoice.id).toArray();
-    const withProducts = await Promise.all(items.map(async (item) => {
-      const product = await db.products.get(item.product_id);
+    const { data: items = [] } = await supabase.from('invoice_items').select('*').eq('invoice_id', invoice.id);
+    const withProducts = await Promise.all((items || []).map(async (item) => {
+      const { data: product } = await supabase.from('products').select('*').eq('id', item.product_id).single();
       return { ...item, product };
     }));
     let customer = null;
-    if (invoice.customer_id) customer = await db.customers.get(invoice.customer_id).catch(() => null);
+    if (invoice.customer_id) {
+      const { data } = await supabase.from('customers').select('*').eq('id', invoice.customer_id).single();
+      customer = data;
+    }
     setSelectedItems(withProducts);
     setSelectedCustomer(customer);
     setSelectedInvoice(invoice);

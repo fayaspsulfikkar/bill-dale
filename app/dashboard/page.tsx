@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import db from "@/offline/db";
+import { supabase } from "@/lib/supabase";
+import { useProducts, useInventory, useBranches, useInvoices, useInvoiceItems } from "@/lib/api/queries";
 import { usePOSStore } from "@/store/posStore";
 import { useAuthStore } from "@/store/authStore";
 import { BranchFilterChip } from "@/components/BranchFilterChip";
@@ -39,14 +39,24 @@ export default function DashboardOverview() {
   }, [selectedBranchId]);
 
   // Data queries
-  const allInvoices = useLiveQuery(() => db.invoices.toArray()) || [];
-  const invoiceItems = useLiveQuery(() => db.invoice_items.toArray()) || [];
-  const products = useLiveQuery(() => db.products.toArray()) || [];
-  const branches = useLiveQuery(() => db.branches.toArray()) || [];
-  const inventory = useLiveQuery(() => db.inventory.toArray()) || [];
-  const heldOrders = useLiveQuery(() => db.held_orders.toArray()) || [];
-  const cashRegisters = useLiveQuery(() => db.cash_registers.toArray()) || [];
-  const returnOrders = useLiveQuery(() => db.return_orders.toArray()) || [];
+  const { data: branches = [] } = useBranches(businessId || null);
+  const branchIds = useMemo(() => branches.map(b => b.id), [branches]);
+  const { data: allInvoices = [] } = useInvoices(branchIds);
+  const invoiceIds = useMemo(() => allInvoices.map(i => i.id), [allInvoices]);
+  const { data: invoiceItems = [] } = useInvoiceItems(invoiceIds);
+  const { data: products = [] } = useProducts(businessId || null);
+  const { data: inventory = [] } = useInventory(branchIds);
+
+  const [heldOrders, setHeldOrders] = useState<any[]>([]);
+  const [cashRegisters, setCashRegisters] = useState<any[]>([]);
+  const [returnOrders, setReturnOrders] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!businessId) return;
+    supabase.from('held_orders').select('*').eq('business_id', businessId).then(({ data }) => setHeldOrders(data || []));
+    supabase.from('cash_registers').select('*').eq('business_id', businessId).then(({ data }) => setCashRegisters(data || []));
+    supabase.from('return_orders').select('*').eq('business_id', businessId).then(({ data }) => setReturnOrders(data || []));
+  }, [businessId]);
 
   // Filter invoices by branch
   const branchInvoices = useMemo(() => {

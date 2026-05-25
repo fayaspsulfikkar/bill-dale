@@ -15,8 +15,8 @@ import { usePOSStore } from "@/store/posStore";
 import { signOut } from "@/lib/auth";
 import Image from "next/image";
 import { useState, useEffect, useTransition } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import db from "@/offline/db";
+import { supabase } from "@/lib/supabase";
+import { useBranches } from "@/lib/api/queries";
 import { AdminPinDialog } from "@/components/AdminPinDialog";
 
 interface NavItem {
@@ -50,7 +50,7 @@ export function DashboardSidebar() {
   const [timeLeftFormatted, setTimeLeftFormatted] = useState("");
   
   const { selectedBranchId, setSelectedBranchId } = usePOSStore();
-  const branches = useLiveQuery(() => db.branches.toArray(), []);
+  const { data: branches = [] } = useBranches(businessId || null);
   const activeBranch = branches?.find(b => b.id === selectedBranchId);
 
   useEffect(() => {
@@ -88,15 +88,22 @@ export function DashboardSidebar() {
   }, [staffMode, pathname, router]);
 
   // Multi-business: fetch all businesses this user is a member of
-  const memberships = useLiveQuery(
-    () => user ? db.business_members.where("user_id").equals(user.id).toArray() : [],
-    [user?.id]
-  );
-  const allBusinessIds = memberships?.map((m) => m.business_id) ?? [];
-  const businesses = useLiveQuery(
-    () => allBusinessIds.length ? db.businesses.where("id").anyOf(allBusinessIds).toArray() : [],
-    [allBusinessIds.join(",")]
-  );
+  const [businesses, setBusinesses] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("business_members")
+      .select("business_id")
+      .eq("user_id", user.id)
+      .then(({ data: memberships }) => {
+        if (!memberships || memberships.length === 0) return;
+        const ids = memberships.map(m => m.business_id);
+        supabase.from("businesses")
+          .select("*")
+          .in("id", ids)
+          .then(({ data }) => setBusinesses(data || []));
+      });
+  }, [user]);
 
   const handleLogout = async () => {
     await signOut();

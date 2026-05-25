@@ -5,6 +5,7 @@ import "./globals.css";
 import { Analytics } from "@vercel/analytics/next";
 import AuthProvider from "@/components/AuthProvider";
 import ThemeInitializer from "@/components/ThemeInitializer";
+import { QueryProvider } from "@/components/QueryProvider";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -34,7 +35,9 @@ export default function RootLayout({
     >
       <body suppressHydrationWarning className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeInitializer />
-        <AuthProvider>{children}</AuthProvider>
+        <QueryProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </QueryProvider>
         <Toaster 
           theme="dark" 
           position="bottom-right" 

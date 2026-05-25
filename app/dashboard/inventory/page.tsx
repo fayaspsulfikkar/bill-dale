@@ -1,7 +1,9 @@
 "use client";
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import db, { type Product, type Inventory, type Branch } from "@/offline/db";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { useProducts, useInventory, useBranches } from "@/lib/api/queries";
+import type { Product, Inventory, Branch } from "@/lib/types";
 import { useAuthStore } from "@/store/authStore";
 import { usePOSStore } from "@/store/posStore";
 import { useDeviceStore } from "@/store/deviceStore";
@@ -121,11 +123,13 @@ function StockCell({ stock, isSelected, onEdit }: { stock: number; isSelected: b
 
 export default function InventoryPage() {
   useCurrencyVersion();
-  const { user, role } = useAuthStore();
-  const products = useLiveQuery(() => db.products.toArray()) ?? [];
-  const inventory = useLiveQuery(() => db.inventory.toArray()) ?? [];
-  const branches = useLiveQuery(() => db.branches.toArray()) ?? [];
-  const dbUser = useLiveQuery(() => user ? db.users.get(user.id) : undefined, [user?.id]);
+  const { user, role, businessId } = useAuthStore();
+  const queryClient = useQueryClient();
+  const { data: products = [] } = useProducts(businessId || null);
+  const { data: branches = [] } = useBranches(businessId || null);
+  const branchIds = useMemo(() => branches.map(b => b.id), [branches]);
+  const { data: inventory = [] } = useInventory(branchIds);
+  const dbUser = user;
 
   const [branchFilter, setBranchFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
@@ -295,13 +299,12 @@ export default function InventoryPage() {
 
     try {
       if (existing) {
-        await db.inventory.update(existing.id, { stock: newStock, last_updated: ts });
-        await db.sync_queue.add({ table_name: "inventory", operation: "UPDATE", data: { ...existing, stock: newStock }, timestamp: ts });
+        await supabase.from('inventory').update({ stock: newStock, last_updated: ts }).eq('id', existing.id);
       } else {
         const nw: Inventory = { id: crypto.randomUUID(), product_id: match.id, branch_id: targetBranchId, stock: newStock, last_updated: ts };
-        await db.inventory.add(nw);
-        await db.sync_queue.add({ table_name: "inventory", operation: "INSERT", data: nw, timestamp: ts });
+        await supabase.from('inventory').insert(nw);
       }
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
 
       const log: ScanLog = {
         id: crypto.randomUUID(),
@@ -340,8 +343,8 @@ export default function InventoryPage() {
       const existing = inventory.find(i => i.product_id === log.product_id && i.branch_id === log.branch_id);
 
       if (existing) {
-        await db.inventory.update(existing.id, { stock: log.previousStock, last_updated: ts });
-        await db.sync_queue.add({ table_name: "inventory", operation: "UPDATE", data: { ...existing, stock: log.previousStock }, timestamp: ts });
+        await supabase.from('inventory').update({ stock: log.previousStock, last_updated: ts }).eq('id', existing.id);
+        queryClient.invalidateQueries({ queryKey: ["inventory"] });
       }
 
       setScanLedger(prev => prev.filter(x => x.id !== log.id));
@@ -477,22 +480,19 @@ export default function InventoryPage() {
     if (!targetBranchId) return;
 
     try {
-      await db.transaction("rw", db.inventory, db.sync_queue, async () => {
-        for (const rec of csvPreview) {
-          const match = products.find(p => p.sku.toLowerCase() === rec.sku.toLowerCase());
-          if (!match) continue;
+      for (const rec of csvPreview) {
+        const match = products.find(p => p.sku.toLowerCase() === rec.sku.toLowerCase());
+        if (!match) continue;
 
-          const ex = inventory.find(i => i.product_id === match.id && i.branch_id === targetBranchId);
-          if (ex) {
-            await db.inventory.update(ex.id, { stock: rec.newStock, last_updated: ts });
-            await db.sync_queue.add({ table_name: "inventory", operation: "UPDATE", data: { ...ex, stock: rec.newStock }, timestamp: ts });
-          } else {
-            const nw: Inventory = { id: crypto.randomUUID(), product_id: match.id, branch_id: targetBranchId, stock: rec.newStock, last_updated: ts };
-            await db.inventory.add(nw);
-            await db.sync_queue.add({ table_name: "inventory", operation: "INSERT", data: nw, timestamp: ts });
-          }
+        const ex = inventory.find(i => i.product_id === match.id && i.branch_id === targetBranchId);
+        if (ex) {
+          await supabase.from('inventory').update({ stock: rec.newStock, last_updated: ts }).eq('id', ex.id);
+        } else {
+          const nw: Inventory = { id: crypto.randomUUID(), product_id: match.id, branch_id: targetBranchId, stock: rec.newStock, last_updated: ts };
+          await supabase.from('inventory').insert(nw);
         }
-      });
+      }
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
 
       alert(`Successfully synchronized stock adjustment for ${csvPreview.length} items!`);
       setCsvUploadOpen(false);
@@ -529,13 +529,12 @@ export default function InventoryPage() {
     const ts = new Date().toISOString();
     const ex = inventory.find(i => i.product_id === editCell.productId && i.branch_id === editCell.branchId);
     if (ex) {
-      await db.inventory.update(ex.id, { stock, last_updated: ts });
-      await db.sync_queue.add({ table_name: "inventory", operation: "UPDATE", data: { ...ex, stock }, timestamp: ts });
+      await supabase.from('inventory').update({ stock, last_updated: ts }).eq('id', ex.id);
     } else {
       const nw: Inventory = { id: crypto.randomUUID(), product_id: editCell.productId, branch_id: editCell.branchId, stock, last_updated: ts };
-      await db.inventory.add(nw);
-      await db.sync_queue.add({ table_name: "inventory", operation: "INSERT", data: nw, timestamp: ts });
+      await supabase.from('inventory').insert(nw);
     }
+    queryClient.invalidateQueries({ queryKey: ["inventory"] });
     setEditCell(null);
   };
 
@@ -563,18 +562,17 @@ export default function InventoryPage() {
     const ts = new Date().toISOString();
     const base = getBase(form.price, form.gst_percent, form.price_includes_gst);
     try {
-      await db.transaction("rw", db.products, db.inventory, db.sync_queue, async () => {
-        for (const v of form.variants) {
-          const p: Product = { id: crypto.randomUUID(), name: form.name, category: form.category, brand: form.brand, size: v.size, color: form.color, sku: v.sku, price: base, gst_percent: parseFloat(form.gst_percent), created_at: ts };
-          await db.products.add(p);
-          await db.sync_queue.add({ table_name: "products", operation: "INSERT", data: p, timestamp: ts });
-          for (const [bid, stockStr] of Object.entries(v.stockPerBranch)) {
-            const inv: Inventory = { id: crypto.randomUUID(), product_id: p.id, branch_id: bid, stock: parseInt(stockStr) || 0, last_updated: ts };
-            await db.inventory.add(inv);
-            await db.sync_queue.add({ table_name: "inventory", operation: "INSERT", data: inv, timestamp: ts });
-          }
+      if (!businessId) throw new Error("No business ID");
+      for (const v of form.variants) {
+        const p: Product = { id: crypto.randomUUID(), business_id: businessId, name: form.name, category: form.category, brand: form.brand, size: v.size, color: form.color, sku: v.sku, price: base, gst_percent: parseFloat(form.gst_percent), created_at: ts };
+        await supabase.from('products').insert(p);
+        for (const [bid, stockStr] of Object.entries(v.stockPerBranch)) {
+          const inv: Inventory = { id: crypto.randomUUID(), product_id: p.id, branch_id: bid, stock: parseInt(stockStr) || 0, last_updated: ts };
+          await supabase.from('inventory').insert(inv);
         }
-      });
+      }
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
       setIsOpen(false);
     } catch (err) { console.error(err); alert("Failed to save."); }
     finally { setSubmitting(false); }
@@ -593,8 +591,10 @@ export default function InventoryPage() {
   const doDeleteProduct = async (pidOverride?: string) => {
     const pid = pidOverride || pinForDelete;
     if (!pid) return;
-    await db.inventory.where("product_id").equals(pid).delete();
-    await db.products.delete(pid);
+    await supabase.from('inventory').delete().eq('product_id', pid);
+    await supabase.from('products').delete().eq('id', pid);
+    queryClient.invalidateQueries({ queryKey: ["products"] });
+    queryClient.invalidateQueries({ queryKey: ["inventory"] });
     setPinForDelete(null);
   };
 

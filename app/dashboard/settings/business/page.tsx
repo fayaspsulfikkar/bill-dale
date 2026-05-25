@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import db from "@/offline/db";
+
 import { useAuthStore } from "@/store/authStore";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,10 +13,12 @@ import { supabase } from "@/lib/supabase";
 
 export default function BusinessSettingsPage() {
   const { businessId } = useAuthStore();
-  const business = useLiveQuery(
-    () => businessId ? db.businesses.get(businessId) : undefined,
-    [businessId]
-  );
+  const [business, setBusiness] = useState<any>(null);
+  
+  useEffect(() => {
+    if (!businessId) return;
+    supabase.from("businesses").select("*").eq("id", businessId).single().then(({ data }) => setBusiness(data));
+  }, [businessId]);
 
   const [form, setForm] = useState({
     name: "", owner_name: "", mobile: "", email: "",
@@ -37,7 +38,6 @@ export default function BusinessSettingsPage() {
     e.preventDefault();
     if (!businessId) return;
     setSaving(true);
-    await db.businesses.update(businessId, form);
     if (supabase) await supabase.from("businesses").update(form).eq("id", businessId);
     setSaving(false);
     setSaved(true);

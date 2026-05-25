@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import db, { type Customer } from "@/offline/db";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { useCustomers } from "@/lib/api/queries";
+import type { Customer } from "@/lib/types";
 import { useAuthStore } from "@/store/authStore";
 import { usePOSStore } from "@/store/posStore";
 import { Input } from "@/components/ui/input";
@@ -31,6 +33,7 @@ function validateEmail(email: string) {
 
 export function CheckoutCustomerPanel() {
   const { businessId } = useAuthStore();
+  const queryClient = useQueryClient();
   const { selectedCustomer, setSelectedCustomer } = usePOSStore();
   const [search, setSearch] = useState("");
   const [mode, setMode] = useState<"view" | "search" | "create">("view");
@@ -41,10 +44,7 @@ export function CheckoutCustomerPanel() {
   const customer = selectedCustomer ?? WALK_IN;
   const isWalkIn = customer.id === "__walk_in__";
 
-  const allCustomers = useLiveQuery(
-    () => businessId ? db.customers.where("business_id").equals(businessId).toArray() : [],
-    [businessId]
-  ) ?? [];
+  const { data: allCustomers = [] } = useCustomers(businessId || null);
 
   const filteredCustomers = search.trim()
     ? allCustomers.filter(c =>
@@ -82,13 +82,8 @@ export function CheckoutCustomerPanel() {
         created_at: new Date().toISOString(),
         synced: false,
       };
-      await db.customers.add(newCustomer);
-      await db.sync_queue.add({
-        table_name: "customers",
-        operation: "INSERT",
-        data: newCustomer,
-        timestamp: newCustomer.created_at,
-      });
+      await supabase.from('customers').insert(newCustomer);
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
       setSelectedCustomer(newCustomer);
       setMode("view");
       setForm({ name: "", phone: "", email: "", address: "", notes: "" });

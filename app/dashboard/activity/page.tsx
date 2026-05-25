@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import db from "@/offline/db";
+import { useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { useBranches } from "@/lib/api/queries";
 import { useAuthStore } from "@/store/authStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -53,14 +54,17 @@ export default function ActivityPage() {
   const [dateRange, setDateRange] = useState<DateRange>(getDateRange("30days"));
   const [filterBranchId, setFilterBranchId] = useState<string | "all">("all");
 
-  const logs = useLiveQuery(
-    () => businessId
-      ? db.activity_logs.where("business_id").equals(businessId).reverse().sortBy("created_at")
-      : [],
-    [businessId]
-  );
+  const [logs, setLogs] = useState<any[]>([]);
+  useEffect(() => {
+    if (!businessId) return;
+    supabase.from('activity_logs')
+      .select('*')
+      .eq('business_id', businessId)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => setLogs(data || []));
+  }, [businessId]);
 
-  const branches = useLiveQuery(() => db.branches.toArray(), []);
+  const { data: branches = [] } = useBranches(businessId || null);
 
   const filteredLogs = useMemo(() => {
     let list = logs || [];

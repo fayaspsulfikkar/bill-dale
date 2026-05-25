@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import db from "@/offline/db";
+
 import { Button } from "@/components/ui/button";
 import { signInWithGoogle } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
@@ -18,12 +18,12 @@ export default function InviteAcceptPage() {
 
   useEffect(() => {
     const load = async () => {
-      const inv = await db.staff_invitations.where("token").equals(token).first();
+      const { data: inv } = await supabase.from("staff_invitations").select("*").eq("token", token).single();
       if (!inv) { setStatus("invalid"); return; }
       if (inv.accepted_at) { setStatus("accepted"); return; }
       if (new Date(inv.expires_at) < new Date()) { setStatus("expired"); return; }
 
-      const biz = await db.businesses.get(inv.business_id);
+      const { data: biz } = await supabase.from("businesses").select("*").eq("id", inv.business_id).single();
       setBusinessName(biz?.name ?? "a business");
       setInvite({ business_id: inv.business_id, role: inv.role });
       setStatus("valid");
