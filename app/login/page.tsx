@@ -2,16 +2,18 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { signInWithGoogle, signInWithEmail } from "@/lib/auth";
+import { signInWithGoogle, signInWithEmail, signUpWithEmail } from "@/lib/auth";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
+  const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const { login } = useAuthStore();
@@ -52,14 +54,21 @@ export default function LoginPage() {
       return;
     }
     setError(null);
+    setSuccessMsg(null);
     setEmailLoading(true);
     try {
-      await signInWithEmail(email, password);
-      // No need to manually push if AuthProvider listens to auth state changes, 
-      // but pushing is safe here if needed or AuthProvider will redirect.
-      router.push("/dashboard");
+      if (isSignUp) {
+        await signUpWithEmail(email, password);
+        setSuccessMsg("Account created successfully! You can now sign in.");
+        setIsSignUp(false); // Switch to login mode
+        setPassword(""); // Clear password for security
+      } else {
+        await signInWithEmail(email, password);
+        router.push("/dashboard");
+      }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Invalid email or password.");
+      setError(err instanceof Error ? err.message : "Authentication failed.");
+    } finally {
       setEmailLoading(false);
     }
   };
@@ -110,8 +119,8 @@ export default function LoginPage() {
           className="bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl p-7 shadow-2xl"
         >
           <div className="text-center mb-6">
-            <h2 className="text-lg font-bold">Welcome back</h2>
-            <p className="text-muted-foreground text-sm mt-1">Sign in to access your dashboard</p>
+            <h2 className="text-lg font-bold">{isSignUp ? "Create an account" : "Welcome back"}</h2>
+            <p className="text-muted-foreground text-sm mt-1">{isSignUp ? "Sign up to get started" : "Sign in to access your dashboard"}</p>
           </div>
 
           {error && (
@@ -121,6 +130,16 @@ export default function LoginPage() {
               className="p-3 mb-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm"
             >
               {error}
+            </motion.div>
+          )}
+
+          {successMsg && (
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-3 mb-4 rounded-lg bg-green-500/10 border border-green-500/20 text-green-600 text-sm"
+            >
+              {successMsg}
             </motion.div>
           )}
 
@@ -158,9 +177,23 @@ export default function LoginPage() {
               whileTap={{ scale: (emailLoading || loading) ? 1 : 0.98 }}
               className="w-full flex items-center justify-center gap-2 py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl shadow-md hover:shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed text-sm"
             >
-              {emailLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign In with Email"}
+              {emailLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isSignUp ? "Sign Up" : "Sign In with Email")}
             </motion.button>
           </form>
+
+          <div className="text-center mb-4">
+            <button
+              type="button"
+              onClick={() => {
+                setIsSignUp(!isSignUp);
+                setError(null);
+                setSuccessMsg(null);
+              }}
+              className="text-sm text-primary hover:underline"
+            >
+              {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
+            </button>
+          </div>
 
           <div className="relative flex items-center py-2 mb-4">
             <div className="flex-grow border-t border-border"></div>
