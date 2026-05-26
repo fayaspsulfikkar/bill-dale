@@ -364,7 +364,9 @@ export function DashboardSidebar() {
           const target = pinTarget!;
           setPinTarget(null);
           setStaffMode(false, unlockUntil); // globally unlock
-          router.push(target);
+          startTransition(() => {
+            router.push(target);
+          });
         }}
         onClose={() => setPinTarget(null)}
       />

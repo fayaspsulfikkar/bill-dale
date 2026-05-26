@@ -35,7 +35,7 @@ export function AdminPinDialog({
   const pinLength = settings?.security_pin_length ?? 4;
 
   useEffect(() => {
-    if (businessId) {
+    if (businessId && supabase) {
       supabase.from("business_settings").select("*").eq("business_id", businessId).single().then(({ data }) => setSettings(data));
     }
   }, [businessId]);
