@@ -84,12 +84,7 @@ export function AdminPinDialog({
           pin_attempt: pinToVerify,
         });
 
-        const result = await Promise.race([
-          rpcPromise,
-          new Promise<{ data: null; error: { message: string } }>((resolve) =>
-            setTimeout(() => resolve({ data: null, error: { message: "Request timed out" } }), 5000)
-          ),
-        ]);
+        const result = await rpcPromise;
 
         if (result.error) {
           console.error("[AdminPinDialog] RPC error:", result.error);
