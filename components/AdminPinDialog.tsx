@@ -93,7 +93,7 @@ export function AdminPinDialog({
 
         if (result.error) {
           console.error("[AdminPinDialog] RPC error:", result.error);
-          setError("Could not verify PIN. Check your connection and try again.");
+          setError(`Error: ${result.error.message || "Could not verify PIN"}`);
           triggerShake();
           return;
         }
