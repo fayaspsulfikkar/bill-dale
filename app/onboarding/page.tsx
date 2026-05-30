@@ -118,20 +118,21 @@ export default function OnboardingWizard() {
         admin_pin: form.adminPin,
         created_at: new Date().toISOString(),
       };
-      await supabase.from("businesses").insert(newBusiness);
-
-      // 2. Add Owner as Business Member
-      await supabase.from("business_members").insert({
-        business_id: businessId, user_id: user.id, role: "admin", permissions: []
+      // 1 & 2. Create Business and Owner Member via RPC (bypasses RLS deadlock)
+      const { error: rpcError } = await supabase.rpc('create_business_with_owner', {
+        business_data: newBusiness,
+        owner_user_id: user.id
       });
+      if (rpcError) throw rpcError;
 
       // 3. Create First Branch
-      await supabase.from("branches").insert({
+      const { error: branchError } = await supabase.from("branches").insert({
         business_id: businessId,
         name: form.branchName || "Main Store",
         location: form.address,
         is_active: true
       });
+      if (branchError) throw branchError;
 
       // 4. Create Staff Members
       if (form.staff.length > 0) {
@@ -142,7 +143,8 @@ export default function OnboardingWizard() {
           role_title: s.roleTitle,
           is_active: true
         }));
-        await supabase.from("staff_members").insert(staffInserts);
+        const { error: staffError } = await supabase.from("staff_members").insert(staffInserts);
+        if (staffError) throw staffError;
       }
 
       setOnboardingComplete(businessId, newBusiness.name);
