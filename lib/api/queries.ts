@@ -12,10 +12,17 @@ export function useBranches(businessId: string | null) {
         .eq("business_id", businessId)
         .order("created_at", { ascending: true });
       if (error) throw error;
-      return (data || []).map(b => ({
-        ...b,
-        status: b.is_active ? "active" : "inactive"
-      }));
+      return (data || []).map(b => {
+        const contactParts = b.contact ? String(b.contact).split(" | ") : [];
+        return {
+          ...b,
+          status: b.is_active ? "active" : "inactive",
+          address: b.location || "",
+          contact_person: contactParts[0] || "",
+          phone: contactParts[1] || "",
+          email: contactParts[2] || "",
+        };
+      });
     },
     enabled: !!businessId,
   });

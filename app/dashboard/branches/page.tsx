@@ -146,22 +146,34 @@ export default function BranchesPage() {
     if (!formData.name || !formData.address) return;
 
     if (editingBranch) {
-      const updated = { ...editingBranch, ...formData } as Branch;
-      await supabase.from('branches').update(updated).eq('id', updated.id);
+      const dbUpdated = {
+        name: formData.name,
+        location: formData.address,
+        branch_code: formData.branch_code,
+        contact: [formData.contact_person, formData.phone, formData.email].filter(Boolean).join(" | "),
+        is_active: formData.status === "active",
+      };
+      const { error } = await supabase.from('branches').update(dbUpdated).eq('id', editingBranch.id);
+      if (error) {
+        alert("Failed to update branch: " + error.message);
+        return;
+      }
     } else {
       if (!businessId) return;
-      const newBranch: Branch = {
+      const dbBranch = {
         id: crypto.randomUUID(),
         business_id: businessId,
         name: formData.name,
-        address: formData.address,
+        location: formData.address,
         branch_code: formData.branch_code,
-        contact_person: formData.contact_person,
-        phone: formData.phone,
-        email: formData.email,
-        status: formData.status || "active",
+        contact: [formData.contact_person, formData.phone, formData.email].filter(Boolean).join(" | "),
+        is_active: formData.status === "active",
       };
-      await supabase.from('branches').insert(newBranch);
+      const { error } = await supabase.from('branches').insert(dbBranch);
+      if (error) {
+        alert("Failed to create branch: " + error.message);
+        return;
+      }
     }
     queryClient.invalidateQueries({ queryKey: ["branches"] });
     setIsAddOpen(false);
