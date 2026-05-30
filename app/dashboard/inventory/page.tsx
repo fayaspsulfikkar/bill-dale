@@ -19,6 +19,7 @@ import { formatINR } from "@/lib/formatCurrency";
 import { Plus, Search, AlertCircle, Building2, Pencil, Check, X, Trash2, PlusCircle, ChevronDown, Barcode, Download, Upload, Undo, RefreshCw, Sparkles, Volume2, ShoppingBag } from "lucide-react";
 import { useCurrencyVersion } from "@/components/CurrencyRefreshBoundary";
 import { useNeedsApproval } from "@/hooks/usePermission";
+import { useRouter } from "next/navigation";
 
 interface SizeVariant { id: string; size: string; sku: string; stockPerBranch: Record<string, string>; }
 interface FormState { name: string; category: string; brand: string; color: string; price: string; gst_percent: string; price_includes_gst: boolean; variants: SizeVariant[]; }
@@ -123,7 +124,8 @@ function StockCell({ stock, isSelected, onEdit }: { stock: number; isSelected: b
 
 export default function InventoryPage() {
   useCurrencyVersion();
-  const { user, role, businessId } = useAuthStore();
+  const { user, role, businessId, staffMode, setStaffMode } = useAuthStore();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { data: products = [] } = useProducts(businessId || null);
   const { data: branches = [] } = useBranches(businessId || null);
@@ -141,6 +143,7 @@ export default function InventoryPage() {
   const [pinForEdit, setPinForEdit] = useState<{ productId: string; branchId: string; stock: number } | null>(null);
   const [pinForAddProduct, setPinForAddProduct] = useState(false);
   const [pinForDelete, setPinForDelete] = useState<string | null>(null);
+  const [pinForAddBranch, setPinForAddBranch] = useState(false);
   const needsDeleteApproval = useNeedsApproval("delete_products");
 
   // New Frictionless Features State
@@ -691,7 +694,7 @@ export default function InventoryPage() {
       {branches.length === 0 && (
         <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-2.5 shadow-sm">
           <AlertCircle className="w-4 h-4 shrink-0" />
-          No branches yet. <a href="/dashboard/branches" className="underline font-semibold ml-1">Add a branch</a> before managing stock.
+          No branches yet. <button onClick={() => staffMode ? setPinForAddBranch(true) : router.push("/dashboard/branches")} className="underline font-semibold ml-1 hover:text-amber-800 transition-colors">Add a branch</button> before managing stock.
         </div>
       )}
 
@@ -1110,6 +1113,16 @@ export default function InventoryPage() {
         title="Confirm Product Deletion"
         onSuccess={() => doDeleteProduct()}
         onClose={() => setPinForDelete(null)}
+      />
+      <AdminPinDialog
+        open={pinForAddBranch}
+        title="Admin Access Required"
+        onSuccess={(unlockUntil) => { 
+          setPinForAddBranch(false); 
+          setStaffMode(false, unlockUntil);
+          router.push("/dashboard/branches");
+        }}
+        onClose={() => setPinForAddBranch(false)}
       />
     </div>
   );
