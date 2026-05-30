@@ -135,22 +135,33 @@ async function hydrateUser(
   const persisted = useAuthStore.getState();
 
   // Race membership query against a 7s timeout
-  const membership = await Promise.race([
+  const membershipResult = await Promise.race([
     getBusinessMembership(supabaseUser.id),
-    new Promise<null>((resolve) => setTimeout(() => resolve(null), 7000)),
+    new Promise<{ data: null; error: Error }>((resolve) => setTimeout(() => resolve({ data: null, error: new Error('Timeout') }), 7000)),
   ]);
+
+  const membership = membershipResult.data;
+  const hasError = !!membershipResult.error;
 
   // --- Fallback chain ---
   // 1. Supabase membership (most authoritative)
   // 2. Zustand localStorage persisted state
-  // 3. Dexie IndexedDB (survives device restarts and localStorage wipes)
-  let businessId   = membership?.business_id   ?? persisted.businessId;
-  let businessName = membership?.businesses?.name ?? persisted.businessName;
-  let hasOnboarded = membership !== null
-    ? !!membership.business_id
-    : persisted.hasCompletedOnboarding;
+  
+  let businessId: string | null = null;
+  let businessName: string | null = null;
+  let hasOnboarded = false;
 
-
+  if (hasError) {
+    // Network error or timeout: fall back to persisted offline state
+    businessId = persisted.businessId;
+    businessName = persisted.businessName;
+    hasOnboarded = persisted.hasCompletedOnboarding;
+  } else {
+    // Successfully queried DB (if membership is null, they truly have no businesses!)
+    businessId = membership?.business_id ?? null;
+    businessName = membership?.businesses?.name ?? null;
+    hasOnboarded = !!businessId;
+  }
 
   const role = (membership?.role ?? (hasOnboarded ? "owner" : null)) as UserRole | null;
   

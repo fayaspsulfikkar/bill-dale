@@ -43,14 +43,12 @@ export async function getSession() {
 }
 
 export async function getBusinessMembership(userId: string) {
-  if (!supabase) return null;
-  const { data, error } = await supabase
+  if (!supabase) return { data: null, error: new Error('Supabase not configured') };
+  return supabase
     .from('business_members')
     .select('*, businesses(*)')
     .eq('user_id', userId)
     .order('joined_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) return null;
-  return data;
 }
