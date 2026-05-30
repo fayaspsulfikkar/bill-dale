@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
 import type { BusinessSettings } from "@/offline/db";
 
