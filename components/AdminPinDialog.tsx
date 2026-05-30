@@ -77,45 +77,39 @@ export function AdminPinDialog({
         return;
       }
 
-      let actualPin: string | null | undefined = null;
-
       if (supabase) {
-        // Race with a 5s timeout so the UI never gets stuck on "Verifying..."
-        const queryPromise = supabase
-          .from("businesses")
-          .select("admin_pin")
-          .eq("id", businessId)
-          .maybeSingle();
+        // Use RPC function which runs as SECURITY DEFINER — bypasses RLS cleanly
+        const rpcPromise = supabase.rpc("verify_admin_pin", {
+          bid: businessId,
+          pin_attempt: pinToVerify,
+        });
 
         const result = await Promise.race([
-          queryPromise,
+          rpcPromise,
           new Promise<{ data: null; error: { message: string } }>((resolve) =>
             setTimeout(() => resolve({ data: null, error: { message: "Request timed out" } }), 5000)
           ),
         ]);
 
         if (result.error) {
-          console.error("[AdminPinDialog] DB error:", result.error);
+          console.error("[AdminPinDialog] RPC error:", result.error);
           setError("Could not verify PIN. Check your connection and try again.");
           triggerShake();
           return;
         }
-        if (result.data?.admin_pin) actualPin = result.data.admin_pin;
-      }
 
-      if (!actualPin) {
-        setError("No PIN set. Go to Settings to create one first.");
-        triggerShake();
-        return;
-      }
-
-      if (actualPin === pinToVerify) {
-        onSuccess(Date.now() + durationMins * 60 * 1000);
+        if (result.data === true) {
+          onSuccess(Date.now() + durationMins * 60 * 1000);
+        } else {
+          setError("Incorrect PIN. Try again.");
+          setPin("");
+          triggerShake();
+          inputRef.current?.focus();
+        }
       } else {
-        setError("Incorrect PIN. Try again.");
-        setPin("");
+        // Mock mode fallback
+        setError("Supabase not configured.");
         triggerShake();
-        inputRef.current?.focus();
       }
     } catch (err) {
       console.error("[AdminPinDialog] verify error:", err);
