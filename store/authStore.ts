@@ -89,10 +89,17 @@ export const useAuthStore = create<AuthState>()(
           pinRequiredActions: [],
           hasCompletedOnboarding: false,
           isAuthenticated: false,
-          staffMode: true, // reset to locked on logout
+          staffMode: true,
           staffModeUnlockUntil: null,
         }),
     }),
-    { name: 'bill-dale-auth' }
+    { 
+      name: 'bill-dale-auth',
+      partialize: (state) => ({ 
+        staffMode: state.staffMode,
+        staffModeUnlockUntil: state.staffModeUnlockUntil,
+        // Supabase gotrue handles session persistence. We don't cache business data.
+      }),
+    }
   )
 );
