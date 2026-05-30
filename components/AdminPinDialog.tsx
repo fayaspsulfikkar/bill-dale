@@ -77,34 +77,46 @@ export function AdminPinDialog({
         return;
       }
 
-      if (supabase) {
-        // Use RPC function which runs as SECURITY DEFINER — bypasses RLS cleanly
-        const rpcPromise = supabase.rpc("verify_admin_pin", {
-          bid: businessId,
-          pin_attempt: pinToVerify,
-        });
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-        const result = await rpcPromise;
-
-        if (result.error) {
-          console.error("[AdminPinDialog] RPC error:", result.error);
-          setError(`Error: ${result.error.message || "Could not verify PIN"}`);
-          triggerShake();
-          return;
-        }
-
-        if (result.data === true) {
-          onSuccess(Date.now() + durationMins * 60 * 1000);
-        } else {
-          setError("Incorrect PIN. Try again.");
-          setPin("");
-          triggerShake();
-          inputRef.current?.focus();
-        }
-      } else {
-        // Mock mode fallback
+      if (!supabaseUrl || !supabaseKey) {
         setError("Supabase not configured.");
         triggerShake();
+        return;
+      }
+
+      const res = await fetch(`${supabaseUrl}/rest/v1/rpc/verify_admin_pin`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": supabaseKey,
+          "Authorization": `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
+          bid: businessId,
+          pin_attempt: pinToVerify,
+        }),
+        signal: AbortSignal.timeout(15000) // 15 second timeout to prevent endless hang if network drops
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("[AdminPinDialog] RPC fetch error:", errText);
+        setError("Could not verify PIN.");
+        triggerShake();
+        return;
+      }
+
+      const data = await res.json();
+
+      if (data === true) {
+        onSuccess(Date.now() + durationMins * 60 * 1000);
+      } else {
+        setError("Incorrect PIN. Try again.");
+        setPin("");
+        triggerShake();
+        inputRef.current?.focus();
       }
     } catch (err) {
       console.error("[AdminPinDialog] verify error:", err);
