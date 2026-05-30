@@ -80,15 +80,28 @@ export function AdminPinDialog({
       let actualPin: string | null | undefined = null;
 
       if (supabase) {
-        const { data, error: dbErr } = await supabase
+        // Race with a 5s timeout so the UI never gets stuck on "Verifying..."
+        const queryPromise = supabase
           .from("businesses")
           .select("admin_pin")
           .eq("id", businessId)
           .maybeSingle();
-        if (!dbErr && data?.admin_pin) actualPin = data.admin_pin;
+
+        const result = await Promise.race([
+          queryPromise,
+          new Promise<{ data: null; error: { message: string } }>((resolve) =>
+            setTimeout(() => resolve({ data: null, error: { message: "Request timed out" } }), 5000)
+          ),
+        ]);
+
+        if (result.error) {
+          console.error("[AdminPinDialog] DB error:", result.error);
+          setError("Could not verify PIN. Check your connection and try again.");
+          triggerShake();
+          return;
+        }
+        if (result.data?.admin_pin) actualPin = result.data.admin_pin;
       }
-
-
 
       if (!actualPin) {
         setError("No PIN set. Go to Settings to create one first.");
@@ -104,7 +117,8 @@ export function AdminPinDialog({
         triggerShake();
         inputRef.current?.focus();
       }
-    } catch {
+    } catch (err) {
+      console.error("[AdminPinDialog] verify error:", err);
       setError("Something went wrong. Try again.");
       triggerShake();
     } finally {
