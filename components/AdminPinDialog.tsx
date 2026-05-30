@@ -86,39 +86,12 @@ export function AdminPinDialog({
         return;
       }
 
-      let accessToken = supabaseKey;
-      try {
-        const projectRef = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1];
-        if (projectRef) {
-          const storageKey = `sb-${projectRef}-auth-token`;
-          const stored = localStorage.getItem(storageKey);
-          if (stored) {
-            const session = JSON.parse(stored);
-            if (session?.access_token) {
-              accessToken = session.access_token;
-            }
-          }
-        }
-        
-        // Fallback to supabase.auth.getSession with a strict timeout to avoid deadlock
-        if (accessToken === supabaseKey && supabase) {
-          const sessionPromise = supabase.auth.getSession();
-          const timeoutPromise = new Promise<any>((resolve) => setTimeout(() => resolve(null), 500));
-          const result = await Promise.race([sessionPromise, timeoutPromise]);
-          if (result?.data?.session?.access_token) {
-            accessToken = result.data.session.access_token;
-          }
-        }
-      } catch (e) {
-        console.error("[AdminPinDialog] Token extraction failed:", e);
-      }
-
       const res = await fetch(`${supabaseUrl}/rest/v1/rpc/verify_admin_pin`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "apikey": supabaseKey,
-          "Authorization": `Bearer ${accessToken}`,
+          "Authorization": `Bearer ${supabaseKey}`,
         },
         body: JSON.stringify({
           bid: businessId,
